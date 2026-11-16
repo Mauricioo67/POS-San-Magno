@@ -1,0 +1,30 @@
+﻿@inject IDialogService DialogService
+
+<MudForm Model="@Category">
+    <MudTextField @bind-Value="Category.Name" Label="Nombre" Required Immediate Class="mb-2" />
+    <MudTextField @bind-Value="Category.Description" Label="Descripción" Lines="2" Class="mb-2" />
+</MudForm>
+
+<div class="d-flex justify-end gap-2 mt-4">
+    <MudButton OnClick="Cancel">Cancelar</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Guardar</MudButton>
+</div>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public Category Category { get; set; } = new();
+
+    private void Submit()
+    {
+        if (string.IsNullOrWhiteSpace(Category.Name))
+        {
+            return;
+        }
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

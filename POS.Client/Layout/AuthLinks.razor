@@ -1,0 +1,40 @@
+@inject AuthStateService AuthState
+@inject NavigationManager Navigation
+@implements IDisposable
+
+@if (AuthState.IsAuthenticated)
+{
+    <div class="d-flex align-center">
+        <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Class="mr-2" />
+        <MudText Typo="Typo.body2" Class="mr-2">
+            <strong>@AuthState.FullName</strong>
+            <span class="mud-text-secondary"> · @AuthState.Role</span>
+        </MudText>
+        <MudIconButton Icon="@Icons.Material.Filled.Logout" Size="Size.Small" Color="Color.Inherit"
+                       title="Cerrar sesión" aria-label="Cerrar sesión" OnClick="LogoutAsync" />
+    </div>
+}
+else
+{
+    <MudButton Variant="Variant.Outlined" Color="Color.Inherit" Size="Size.Small"
+               StartIcon="@Icons.Material.Filled.Login"
+               OnClick="@(() => Navigation.NavigateTo("/login"))">Iniciar sesión</MudButton>
+}
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        AuthState.OnChange += OnAuthChanged;
+        await AuthState.InitializeAsync();
+    }
+
+    private void OnAuthChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => AuthState.OnChange -= OnAuthChanged;
+
+    private async Task LogoutAsync()
+    {
+        await AuthState.LogoutAsync();
+        Navigation.NavigateTo("/login");
+    }
+}

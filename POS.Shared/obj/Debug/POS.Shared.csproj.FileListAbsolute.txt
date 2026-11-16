@@ -1,0 +1,12 @@
+C:\Users\Usuuario2\Documents\DesarrolloSis2\POS\POS.Shared\bin\Debug\POS.Shared.dll
+C:\Users\Usuuario2\Documents\DesarrolloSis2\POS\POS.Shared\bin\Debug\POS.Shared.pdb
+C:\Users\Usuuario2\Documents\DesarrolloSis2\POS\POS.Shared\obj\Debug\POS.Shared.csproj.AssemblyReference.cache
+C:\Users\Usuuario2\Documents\DesarrolloSis2\POS\POS.Shared\obj\Debug\POS.Shared.csproj.CoreCompileInputs.cache
+C:\Users\Usuuario2\Documents\DesarrolloSis2\POS\POS.Shared\obj\Debug\POS.Shared.dll
+C:\Users\Usuuario2\Documents\DesarrolloSis2\POS\POS.Shared\obj\Debug\POS.Shared.pdb
+C:\Users\HP\Downloads\desarrollo2\proyecto\POS\POS.Shared\obj\Debug\POS.Shared.csproj.AssemblyReference.cache
+C:\Users\HP\Downloads\desarrollo2\proyecto\POS\POS.Shared\obj\Debug\POS.Shared.csproj.CoreCompileInputs.cache
+C:\Users\HP\Downloads\desarrollo2\proyecto\POS\POS.Shared\obj\Debug\POS.Shared.dll
+C:\Users\HP\Downloads\desarrollo2\proyecto\POS\POS.Shared\obj\Debug\POS.Shared.pdb
+C:\Users\HP\Downloads\desarrollo2\proyecto\POS\POS.Shared\bin\Debug\POS.Shared.dll
+C:\Users\HP\Downloads\desarrollo2\proyecto\POS\POS.Shared\bin\Debug\POS.Shared.pdb

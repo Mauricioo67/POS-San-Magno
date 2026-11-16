@@ -1,0 +1,177 @@
+@page "/users"
+@inject UserApiService UserApi
+@inject AuthStateService AuthState
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Usuarios - App POS</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Usuarios</MudText>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate />
+}
+else if (!AuthState.IsAuthenticated)
+{
+    <MudAlert Severity="Severity.Warning">Debe iniciar sesión para ver esta sección.</MudAlert>
+}
+else if (!AuthState.IsAdmin)
+{
+    <MudAlert Severity="Severity.Warning">Solo los administradores pueden ver los usuarios.</MudAlert>
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+}
+else
+{
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd"
+               OnClick="CreateAsync" Class="mb-3">Nuevo usuario</MudButton>
+    <MudPaper Class="pa-4" Elevation="2">
+        <MudTable Items="@_users" Hover Dense Striped>
+            <HeaderContent>
+                <MudTh>Id</MudTh>
+                <MudTh>Nombre</MudTh>
+                <MudTh>Email</MudTh>
+                <MudTh>Rol</MudTh>
+                <MudTh>Estado</MudTh>
+                <MudTh>Acciones</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.Id</MudTd>
+                <MudTd>@context.Name</MudTd>
+                <MudTd>@context.Email</MudTd>
+                <MudTd>
+                    <MudChip T="string" Size="Size.Small"
+                             Color="@(context.Role == "Administrador" ? Color.Primary : Color.Default)">
+                        @context.Role
+                    </MudChip>
+                </MudTd>
+                <MudTd>
+                    <MudChip T="string" Size="Size.Small"
+                             Color="@(context.IsActive ? Color.Success : Color.Error)">
+                        @(context.IsActive ? "Activo" : "Inactivo")
+                    </MudChip>
+                </MudTd>
+                <MudTd>
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
+                                   aria-label="Editar usuario" OnClick="() => EditAsync(context)" />
+                    @if (context.IsActive)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.PersonOff" Color="Color.Error" Size="Size.Small"
+                                       aria-label="Desactivar usuario" OnClick="() => DeactivateAsync(context)" />
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+        <MudText Typo="Typo.caption" Class="mud-text-secondary mt-2">
+            Las cuentas desactivadas se conservan para proteger el historial de operaciones.
+        </MudText>
+    </MudPaper>
+}
+
+@code {
+    private bool _loading = true;
+    private string? _error;
+    private List<UserDto> _users = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthState.InitializeAsync();
+        if (AuthState.IsAdmin)
+        {
+            await LoadAsync();
+        }
+        _loading = false;
+    }
+
+    private async Task LoadAsync()
+    {
+        _error = null;
+        try
+        {
+            _users = await UserApi.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"No se pudieron cargar los usuarios: {ex.Message}";
+        }
+    }
+
+    private async Task CreateAsync()
+    {
+        var request = new UserManagementRequest { Role = Role.Cajero, IsActive = true };
+        if (!await ShowDialogAsync(request, true))
+        {
+            return;
+        }
+
+        var (success, error) = await UserApi.CreateAsync(request);
+        if (!success)
+        {
+            Snackbar.Add(error ?? "No se pudo crear el usuario", Severity.Error);
+            return;
+        }
+
+        Snackbar.Add("Usuario creado", Severity.Success);
+        await LoadAsync();
+    }
+
+    private async Task EditAsync(UserDto user)
+    {
+        Enum.TryParse(user.Role, out Role role);
+        var request = new UserManagementRequest
+        {
+            Name = user.Name,
+            Email = user.Email,
+            Role = role,
+            IsActive = user.IsActive
+        };
+        if (!await ShowDialogAsync(request, false))
+        {
+            return;
+        }
+
+        var (success, error) = await UserApi.UpdateAsync(user, request);
+        if (!success)
+        {
+            Snackbar.Add(error ?? "No se pudo actualizar el usuario", Severity.Error);
+            return;
+        }
+
+        Snackbar.Add("Usuario actualizado", Severity.Success);
+        await LoadAsync();
+    }
+
+    private async Task DeactivateAsync(UserDto user)
+    {
+        var parameters = new DialogParameters { ["Message"] = $"¿Desactivar la cuenta de {user.Name}?" };
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Confirmar", parameters);
+        if ((await dialog.Result) is not { Canceled: false, Data: not null })
+        {
+            return;
+        }
+
+        var (success, error) = await UserApi.DeactivateAsync(user.Id);
+        if (!success)
+        {
+            Snackbar.Add(error ?? "No se pudo desactivar el usuario", Severity.Error);
+            return;
+        }
+
+        Snackbar.Add("Usuario desactivado", Severity.Success);
+        await LoadAsync();
+    }
+
+    private async Task<bool> ShowDialogAsync(UserManagementRequest request, bool isNew)
+    {
+        var parameters = new DialogParameters
+        {
+            ["User"] = request,
+            ["IsNew"] = isNew
+        };
+        var dialog = await DialogService.ShowAsync<UserDialog>(isNew ? "Nuevo usuario" : "Editar usuario", parameters);
+        return (await dialog.Result) is { Canceled: false, Data: not null };
+    }
+}

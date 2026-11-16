@@ -1,0 +1,47 @@
+﻿@inject IDialogService DialogService
+
+<MudForm Model="@Product">
+    <MudTextField @bind-Value="Product.Code" Label="Código" Disabled="@(!IsNew)" Required Immediate Class="mb-2" />
+    <MudTextField @bind-Value="Product.Name" Label="Nombre" Required Immediate Class="mb-2" />
+    <MudTextField @bind-Value="Product.Description" Label="Descripción" Lines="2" Class="mb-2" />
+    <MudNumericField @bind-Value="Product.Price" Label="Precio" Min="0" Class="mb-2" />
+    <MudNumericField @bind-Value="Product.StockMinimun" Label="Stock mínimo" Min="0" Class="mb-2" />
+    <MudSelect @bind-Value="Product.CategoryId" Label="Categoría" Class="mb-2">
+        @foreach (var category in Categories)
+        {
+            <MudSelectItem Value="@category.Id">@category.Name</MudSelectItem>
+        }
+    </MudSelect>
+    <MudTextField @bind-Value="Product.ImageUrl" Label="URL de imagen" Class="mb-2" />
+    <MudSwitch @bind-Value="Product.IsActive" Label="Activo" Class="mb-2" />
+</MudForm>
+
+<div class="d-flex justify-end gap-2 mt-4">
+    <MudButton OnClick="Cancel">Cancelar</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Guardar</MudButton>
+</div>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public Product Product { get; set; } = new();
+
+    [Parameter]
+    public List<Category> Categories { get; set; } = new();
+
+    [Parameter]
+    public bool IsNew { get; set; }
+
+    private void Submit()
+    {
+        if (string.IsNullOrWhiteSpace(Product.Code) || string.IsNullOrWhiteSpace(Product.Name) || Product.CategoryId == 0)
+        {
+            return;
+        }
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

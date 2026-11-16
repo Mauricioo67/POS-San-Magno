@@ -1,0 +1,121 @@
+﻿@page "/login"
+@inject AuthApiService AuthApi
+@inject AuthStateService AuthState
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<PageTitle>Iniciar sesión - App POS</PageTitle>
+
+<MudPaper Class="pa-6 mx-auto" Style="max-width: 420px; margin-top: 60px;">
+    <MudText Typo="Typo.h5" Class="text-center mb-4">App POS</MudText>
+    <MudTabs Elevation="2" Rounded="true">
+        <MudTabPanel Text="Iniciar sesión">
+            <EditForm Model="_loginModel" OnValidSubmit="LoginAsync" FormNoValidate>
+                <DataAnnotationsValidator />
+                <MudTextField @bind-Value="_loginModel.Email" For="@(() => _loginModel.Email)" Label="Email"
+                              InputType="InputType.Email" Required="true"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email"
+                              AdornmentAriaLabel="Email" Class="mb-3" />
+                <MudTextField @bind-Value="_loginModel.Password" For="@(() => _loginModel.Password)" Label="Contraseña"
+                              Required="true"
+                              InputType="@(_showLoginPassword ? InputType.Text : InputType.Password)"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@(_showLoginPassword ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                              OnAdornmentClick="() => _showLoginPassword = !_showLoginPassword"
+                              AdornmentAriaLabel="Mostrar u ocultar contraseña"
+                              Class="mb-4" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth ButtonType="ButtonType.Submit"
+                           Disabled="_loading">
+                    @if (_loading)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    @(_loading ? "Ingresando..." : "Ingresar")
+                </MudButton>
+            </EditForm>
+        </MudTabPanel>
+        <MudTabPanel Text="Registrarse">
+            <EditForm Model="_registerModel" OnValidSubmit="RegisterAsync" FormNoValidate>
+                <DataAnnotationsValidator />
+                <MudTextField @bind-Value="_registerModel.FullName" For="@(() => _registerModel.FullName)"
+                              Label="Nombre completo" Required="true" Class="mb-3" />
+                <MudTextField @bind-Value="_registerModel.Email" For="@(() => _registerModel.Email)"
+                              Label="Email" InputType="InputType.Email" Required="true" Class="mb-3" />
+                <MudTextField @bind-Value="_registerModel.Password" For="@(() => _registerModel.Password)"
+                              Label="Contraseña" Required="true"
+                              InputType="@(_showRegisterPassword ? InputType.Text : InputType.Password)"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@(_showRegisterPassword ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                              OnAdornmentClick="() => _showRegisterPassword = !_showRegisterPassword"
+                              AdornmentAriaLabel="Mostrar u ocultar contraseña"
+                              Class="mb-3" />
+                <MudTextField @bind-Value="_registerModel.ConfirmPassword" For="@(() => _registerModel.ConfirmPassword)"
+                              Label="Confirmar contraseña" Required="true"
+                              InputType="@(_showRegisterConfirmPassword ? InputType.Text : InputType.Password)"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@(_showRegisterConfirmPassword ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                              OnAdornmentClick="() => _showRegisterConfirmPassword = !_showRegisterConfirmPassword"
+                              AdornmentAriaLabel="Mostrar u ocultar contraseña"
+                              Class="mb-4" />
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" FullWidth ButtonType="ButtonType.Submit"
+                           Disabled="_loading">
+                    @if (_loading)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    @(_loading ? "Registrando..." : "Registrarse")
+                </MudButton>
+            </EditForm>
+        </MudTabPanel>
+    </MudTabs>
+</MudPaper>
+
+@code {
+    private bool _loading = false;
+    private bool _showLoginPassword = false;
+    private bool _showRegisterPassword = false;
+    private bool _showRegisterConfirmPassword = false;
+    private LoginRequest _loginModel = new();
+    private RegisterRequest _registerModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthState.InitializeAsync();
+        if (AuthState.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/");
+        }
+    }
+
+    private async Task LoginAsync()
+    {
+        _loading = true;
+        var (success, error) = await AuthApi.LoginAsync(_loginModel);
+        _loading = false;
+        if (success)
+        {
+            Snackbar.Add("Bienvenido", Severity.Success);
+            Navigation.NavigateTo("/");
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Error al iniciar sesión", Severity.Error);
+        }
+    }
+
+    private async Task RegisterAsync()
+    {
+        _loading = true;
+        var (success, error) = await AuthApi.RegisterAsync(_registerModel);
+        _loading = false;
+        if (success)
+        {
+            Snackbar.Add("Usuario registrado", Severity.Success);
+            Navigation.NavigateTo("/");
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Error al registrarse", Severity.Error);
+        }
+    }
+}

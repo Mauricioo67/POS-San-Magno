@@ -1,0 +1,65 @@
+@page "/"
+@inject AuthStateService AuthState
+@inject NavigationManager Navigation
+
+<PageTitle>Inicio - App POS</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">
+    @(AuthState.IsAuthenticated ? $"Hola, {AuthState.FullName}" : "Bienvenido a App POS")
+</MudText>
+@if (AuthState.IsAuthenticated)
+{
+    <MudChip T="string" Color="@(AuthState.IsAdmin ? Color.Primary : Color.Default)" Variant="Variant.Filled"
+             Icon="@Icons.Material.Filled.Badge" Class="mb-3">
+        Rol: @AuthState.Role
+    </MudChip>
+}
+<MudText Typo="Typo.body1" Class="mud-text-secondary mb-4">Punto de venta San Magno.</MudText>
+
+@if (!AuthState.IsAuthenticated)
+{
+    <MudAlert Severity="Severity.Info" Class="mb-4">Inicie sesión para operar el sistema.</MudAlert>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Login"
+               OnClick="@(() => Navigation.NavigateTo("/login"))">Iniciar sesión</MudButton>
+}
+else
+{
+    <MudGrid Spacing="3">
+        @foreach (var item in _shortcuts)
+        {
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Class="pa-4 d-flex flex-column" Elevation="2" Style="height: 100%;">
+                    <MudIcon Icon="@item.Icon" Color="Color.Primary" Size="Size.Large" Class="mb-2" />
+                    <MudText Typo="Typo.subtitle1" Class="pos-bold">@item.Title</MudText>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">@item.Description</MudText>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth
+                               OnClick="@(() => Navigation.NavigateTo(item.Href))">Abrir</MudButton>
+                </MudPaper>
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+@code {
+    private record Shortcut(string Title, string Description, string Href, string Icon);
+
+    private readonly List<Shortcut> _shortcuts = new()
+    {
+        new("Punto de venta", "Registrar ventas y cobrar.", "/sales", Icons.Material.Filled.PointOfSale),
+        new("Productos", "Catálogo, precios y stock mínimo.", "/products", Icons.Material.Filled.Inventory2),
+        new("Stock", "Entradas, salidas y ajustes.", "/stock", Icons.Material.Filled.Inventory),
+        new("Cierre de caja", "Cuadre del turno.", "/opencashclosing", Icons.Material.Filled.Summarize),
+        new("Dashboard", "Resumen de ventas y alertas.", "/dashboard", Icons.Material.Filled.Dashboard),
+        new("Reportes", "Ventas por período y método de pago.", "/reports", Icons.Material.Filled.Assessment),
+        new("Usuarios", "Cuentas y roles del sistema.", "/users", Icons.Material.Filled.VerifiedUser)
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthState.InitializeAsync();
+        if (!AuthState.IsAdmin)
+        {
+            _shortcuts.RemoveAll(s => s.Href is "/opencashclosing" or "/reports" or "/users");
+        }
+    }
+}

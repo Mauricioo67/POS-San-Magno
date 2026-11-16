@@ -1,0 +1,179 @@
+@page "/dashboard"
+@inject ProductApiService ProductApi
+@inject SaleApiService SaleApi
+@inject CashClosingApiService CashClosingApi
+@inject AuthStateService AuthState
+
+<PageTitle>Dashboard - App POS</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Dashboard</MudText>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate />
+}
+else if (!AuthState.IsAuthenticated)
+{
+    <MudAlert Severity="Severity.Warning">Debe iniciar sesión para ver el dashboard.</MudAlert>
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+}
+else
+{
+    <MudGrid Spacing="3" Class="mb-2">
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Ventas de hoy</MudText>
+                <MudText Typo="Typo.h5">@_todayTotal.ToString("C")</MudText>
+                <MudText Typo="Typo.body2">@_todayCount venta(s)</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Total vendido</MudText>
+                <MudText Typo="Typo.h5">@_totalSales.ToString("C")</MudText>
+                <MudText Typo="Typo.body2">@_sales.Count venta(s) registradas</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Ticket promedio</MudText>
+                <MudText Typo="Typo.h5">@_averageTicket.ToString("C")</MudText>
+                <MudText Typo="Typo.body2">Por venta</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Productos activos</MudText>
+                <MudText Typo="Typo.h5">@_activeProducts</MudText>
+                <MudText Typo="Typo.body2">@LowStock.Count() con stock bajo</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <MudGrid Spacing="3">
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.h6" Class="mb-2">Stock bajo</MudText>
+                @if (!LowStock.Any())
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Sin alertas de stock.</MudText>
+                }
+                else
+                {
+                    <MudTable Items="@LowStock" Hover Dense>
+                        <HeaderContent>
+                            <MudTh>Producto</MudTh>
+                            <MudTh Style="text-align: right">Actual</MudTh>
+                            <MudTh Style="text-align: right">Mínimo</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>@context.Name</MudTd>
+                            <MudTd Style="text-align: right" Class="mud-error-text pos-bold">@context.CurrentStock</MudTd>
+                            <MudTd Style="text-align: right">@context.StockMinimun</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.h6" Class="mb-2">Últimas ventas</MudText>
+                @if (_sales.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Todavía no hay ventas.</MudText>
+                }
+                else
+                {
+                    <MudTable Items="@_sales.Take(8)" Hover Dense>
+                        <HeaderContent>
+                            <MudTh>#</MudTh>
+                            <MudTh>Fecha</MudTh>
+                            <MudTh>Método</MudTh>
+                            <MudTh Style="text-align: right">Total</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>@context.Id</MudTd>
+                            <MudTd>@context.SaleDate.ToString("dd/MM/yy HH:mm")</MudTd>
+                            <MudTd>@context.PaymentMethod</MudTd>
+                            <MudTd Style="text-align: right">@context.TotalAmount.ToString("C")</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    @if (AuthState.IsAdmin)
+    {
+        <MudPaper Class="pa-4 mt-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-2">Último cierre de caja</MudText>
+            @if (_lastClosing == null)
+            {
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">Aún no se ha realizado ningún cierre.</MudText>
+            }
+            else
+            {
+                <MudText Typo="Typo.body1">Fecha: @_lastClosing.EndDate.ToString("dd/MM/yyyy HH:mm")</MudText>
+                <MudText Typo="Typo.body1">Saldo final: <strong>@_lastClosing.FinalBalance.ToString("C")</strong></MudText>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">Registrado por @_lastClosing.User?.Name</MudText>
+            }
+        </MudPaper>
+    }
+}
+
+@code {
+    private bool _loading = true;
+    private string? _error;
+    private List<Product> _products = new();
+    private List<Sale> _sales = new();
+    private POS.Shared.Entities.CashClosing? _lastClosing;
+
+    private decimal _todayTotal;
+    private int _todayCount;
+    private decimal _totalSales;
+    private decimal _averageTicket;
+    private int _activeProducts;
+
+    private IEnumerable<Product> LowStock =>
+        _products.Where(p => p.IsActive && p.CurrentStock <= p.StockMinimun);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthState.InitializeAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        if (!AuthState.IsAuthenticated)
+        {
+            _loading = false;
+            return;
+        }
+        try
+        {
+            _products = await ProductApi.GetAllAsync();
+            _sales = await SaleApi.GetAllAsync();
+            if (AuthState.IsAdmin)
+            {
+                _lastClosing = await CashClosingApi.GetLastAsync();
+            }
+            var today = DateTime.Today;
+            _todayTotal = _sales.Where(s => s.SaleDate.Date == today).Sum(s => s.TotalAmount);
+            _todayCount = _sales.Count(s => s.SaleDate.Date == today);
+            _totalSales = _sales.Sum(s => s.TotalAmount);
+            _averageTicket = _sales.Count == 0 ? 0 : _totalSales / _sales.Count;
+            _activeProducts = _products.Count(p => p.IsActive);
+        }
+        catch (Exception ex)
+        {
+            _error = $"No se pudieron cargar los datos del dashboard: {ex.Message}";
+        }
+        _loading = false;
+    }
+}

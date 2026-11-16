@@ -1,0 +1,43 @@
+<MudForm>
+    <MudTextField @bind-Value="User.Name" Label="Nombre completo" Required Immediate Class="mb-2" />
+    <MudTextField @bind-Value="User.Email" Label="Email" Required Immediate Class="mb-2" />
+    <MudSelect @bind-Value="User.Role" Label="Rol" Class="mb-2">
+        <MudSelectItem Value="@Role.Cajero">Cajero</MudSelectItem>
+        <MudSelectItem Value="@Role.Administrador">Administrador</MudSelectItem>
+    </MudSelect>
+    <MudTextField @bind-Value="User.Password" Label="@(IsNew ? "Contraseña" : "Nueva contraseña (opcional)")"
+                  InputType="InputType.Password" Required="IsNew" Class="mb-2" />
+    <MudSwitch @bind-Value="User.IsActive" Label="Cuenta activa" Class="mb-2" />
+</MudForm>
+
+<div class="d-flex justify-end gap-2 mt-4">
+    <MudButton OnClick="Cancel">Cancelar</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Guardar</MudButton>
+</div>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public UserManagementRequest User { get; set; } = new();
+
+    [Parameter]
+    public bool IsNew { get; set; }
+
+    private void Submit()
+    {
+        if (string.IsNullOrWhiteSpace(User.Name)
+            || string.IsNullOrWhiteSpace(User.Email)
+            || !User.Email.Contains('@')
+            || (IsNew && User.Password.Length < 6)
+            || (!string.IsNullOrEmpty(User.Password) && User.Password.Length < 6))
+        {
+            return;
+        }
+
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

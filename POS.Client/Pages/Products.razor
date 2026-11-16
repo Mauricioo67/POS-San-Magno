@@ -1,0 +1,211 @@
+﻿@page "/products"
+@inject ProductApiService ProductApi
+@inject CategoryApiService CategoryApi
+@inject AuthStateService AuthState
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Productos - App POS</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Productos</MudText>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate />
+}
+else if (!AuthState.IsAuthenticated)
+{
+    <MudAlert Severity="Severity.Warning">Debe iniciar sesión para ver esta sección.</MudAlert>
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+}
+else
+{
+    @if (AuthState.IsAdmin)
+    {
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="OpenCreateDialog" Class="mb-3">Nuevo producto</MudButton>
+    }
+    <MudTextField @bind-Value="_search" Placeholder="Buscar por código o nombre" Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mb-3" MaxLines="1"
+                  Immediate="true" />
+    <MudTable Items="@FilteredProducts" Hover Striped Dense>
+        <HeaderContent>
+            <MudTh>Código</MudTh>
+            <MudTh>Nombre</MudTh>
+            <MudTh>Categoría</MudTh>
+            <MudTh Style="text-align: right">Precio</MudTh>
+            <MudTh Style="text-align: right">Stock actual</MudTh>
+            <MudTh Style="text-align: right">Stock mínimo</MudTh>
+            <MudTh>Activo</MudTh>
+            <MudTh Style="width: 100px;">Acciones</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.Code</MudTd>
+            <MudTd>@context.Name</MudTd>
+            <MudTd>@context.Category?.Name</MudTd>
+            <MudTd Style="text-align: right">@context.Price.ToString("C")</MudTd>
+            <MudTd Style="text-align: right">
+                <span class="@LowStockClass(context)">@context.CurrentStock</span>
+            </MudTd>
+            <MudTd Style="text-align: right">@context.StockMinimun</MudTd>
+            <MudTd><MudCheckBox ReadOnly Value="@context.IsActive" Disabled="true" /></MudTd>
+            <MudTd>
+                 @if (AuthState.IsAdmin)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary"
+                                   aria-label="Editar producto" OnClick="() => OpenEditDialog(context)" />
+                    @if (context.IsActive)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                       aria-label="Desactivar producto" OnClick="() => DeactivateAsync(context)" />
+                    }
+                }
+                <MudIconButton Icon="@Icons.Material.Filled.Inventory" Size="Size.Small" Color="Color.Info"
+                               aria-label="Movimiento de stock" OnClick="() => GoToStock(context.Id)" />
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+@code {
+    private bool _loading = true;
+    private string? _error;
+    private string _search = string.Empty;
+    private List<Product> _products = new();
+    private List<Category> _categories = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthState.InitializeAsync();
+        await LoadAsync();
+    }
+
+    private IEnumerable<Product> FilteredProducts =>
+        string.IsNullOrWhiteSpace(_search)
+            ? _products
+            : _products.Where(p => p.Code.Contains(_search, StringComparison.OrdinalIgnoreCase)
+                                || p.Name.Contains(_search, StringComparison.OrdinalIgnoreCase));
+
+    private string LowStockClass(Product product) =>
+        product.CurrentStock <= product.StockMinimun ? "mud-error-text pos-bold" : "";
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        if (!AuthState.IsAuthenticated)
+        {
+            _loading = false;
+            return;
+        }
+        try
+        {
+            _products = await ProductApi.GetAllAsync();
+            _categories = await CategoryApi.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"No se pudieron cargar los productos: {ex.Message}";
+        }
+        _loading = false;
+    }
+
+    private void GoToStock(int productId)
+    {
+        Navigation.NavigateTo($"/stock?productId={productId}");
+    }
+
+    [Inject]
+    public NavigationManager Navigation { get; set; } = default!;
+
+    private async Task OpenCreateDialog()
+    {
+        if (_categories.Count == 0)
+        {
+            Snackbar.Add("Primero crea al menos una categoría en Categorías.", Severity.Warning);
+            return;
+        }
+        var product = new Product { IsActive = true, CategoryId = _categories.First().Id };
+        var result = await ShowDialog(product, "Nuevo producto");
+        if (result)
+        {
+            var (success, error) = await ProductApi.CreateAsync(product);
+            if (success)
+            {
+                Snackbar.Add("Producto creado", Severity.Success);
+                await LoadAsync();
+            }
+            else
+            {
+                Snackbar.Add(error ?? "Error al crear", Severity.Error);
+            }
+        }
+    }
+
+    private async Task OpenEditDialog(Product existing)
+    {
+        var product = new Product
+        {
+            Id = existing.Id,
+            Code = existing.Code,
+            Name = existing.Name,
+            Description = existing.Description,
+            Price = existing.Price,
+            CurrentStock = existing.CurrentStock,
+            StockMinimun = existing.StockMinimun,
+            CategoryId = existing.CategoryId,
+            IsActive = existing.IsActive,
+            ImageUrl = existing.ImageUrl
+        };
+        var result = await ShowDialog(product, "Editar producto");
+        if (result)
+        {
+            var (success, error) = await ProductApi.UpdateAsync(product);
+            if (success)
+            {
+                Snackbar.Add("Producto actualizado", Severity.Success);
+                await LoadAsync();
+            }
+            else
+            {
+                Snackbar.Add(error ?? "Error al actualizar", Severity.Error);
+            }
+        }
+    }
+
+    private async Task<bool> ShowDialog(Product product, string title)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Product"] = product,
+            ["Categories"] = _categories,
+            ["IsNew"] = product.Id == 0
+        };
+        var dialog = await DialogService.ShowAsync<ProductDialog>(title, parameters);
+        var result = await dialog.Result;
+        return result is { Canceled: false, Data: not null };
+    }
+
+    private async Task DeactivateAsync(Product product)
+    {
+        var parameters = new DialogParameters { ["Message"] = $"¿Desactivar el producto '{product.Name}'?" };
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Confirmar", parameters);
+        if ((await dialog.Result) is not { Canceled: false, Data: not null })
+        {
+            return;
+        }
+
+        var (success, error) = await ProductApi.DeleteAsync(product.Id);
+        if (!success)
+        {
+            Snackbar.Add(error ?? "No se pudo desactivar el producto", Severity.Error);
+            return;
+        }
+
+        Snackbar.Add("Producto desactivado", Severity.Success);
+        await LoadAsync();
+    }
+}

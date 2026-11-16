@@ -1,0 +1,46 @@
+﻿@inject AuthStateService AuthState
+@implements IDisposable
+
+<MudPaper Class="py-3" Elevation="0">
+    <MudNavMenu>
+        <div class="px-4 pb-2 d-flex align-center">
+            <MudIcon Icon="@Icons.Material.Filled.Storefront" Color="Color.Primary" Size="Size.Medium" Class="mr-3" />
+            <div>
+                <MudText Typo="Typo.subtitle1" Class="pos-bold">App POS</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">San Magno</MudText>
+            </div>
+        </div>
+        <MudDivider Class="my-2" />
+        <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Inicio</MudNavLink>
+        <MudNavLink Href="/dashboard" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
+        <MudNavLink Href="/sales" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.PointOfSale">Punto de venta</MudNavLink>
+        <MudNavLink Href="/products" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Inventory2">Productos</MudNavLink>
+        <MudNavLink Href="/categories" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Category">Categorías</MudNavLink>
+        <MudNavLink Href="/stock" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Inventory">Stock</MudNavLink>
+
+        @if (AuthState.IsAdmin)
+        {
+            <MudDivider Class="my-2" />
+            <MudNavGroup Title="Administración" Icon="@Icons.Material.Filled.AdminPanelSettings" Expanded="true">
+                <MudNavLink Href="/opencashclosing" Icon="@Icons.Material.Filled.Summarize" Match="NavLinkMatch.Prefix">Cierre de caja</MudNavLink>
+                <MudNavLink Href="/reports" Icon="@Icons.Material.Filled.Assessment" Match="NavLinkMatch.Prefix">Reportes</MudNavLink>
+                <MudNavLink Href="/users" Icon="@Icons.Material.Filled.VerifiedUser" Match="NavLinkMatch.Prefix">Usuarios</MudNavLink>
+            </MudNavGroup>
+        }
+
+        <MudDivider Class="my-2" />
+        <MudNavLink Href="/about" Icon="@Icons.Material.Filled.Info" Match="NavLinkMatch.Prefix">Acerca de</MudNavLink>
+    </MudNavMenu>
+</MudPaper>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        AuthState.OnChange += OnAuthChanged;
+        await AuthState.InitializeAsync();
+    }
+
+    private void OnAuthChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => AuthState.OnChange -= OnAuthChanged;
+}

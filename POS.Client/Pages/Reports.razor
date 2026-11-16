@@ -1,0 +1,203 @@
+@page "/reports"
+@inject SaleApiService SaleApi
+@inject AuthStateService AuthState
+@inject IJSRuntime JS
+
+<PageTitle>Reportes - App POS</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Reportes</MudText>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate />
+}
+else if (!AuthState.IsAuthenticated)
+{
+    <MudAlert Severity="Severity.Warning">Debe iniciar sesión para ver esta sección.</MudAlert>
+}
+else if (!AuthState.IsAdmin)
+{
+    <MudAlert Severity="Severity.Warning">Solo los administradores pueden ver los reportes.</MudAlert>
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+}
+else
+{
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <MudGrid Spacing="2">
+            <MudItem xs="12" md="3">
+                <MudDatePicker @bind-Date="_from" Label="Desde" />
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudDatePicker @bind-Date="_to" Label="Hasta" />
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth
+                           StartIcon="@Icons.Material.Filled.FilterAlt" OnClick="Apply">Aplicar filtro</MudButton>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" FullWidth
+                           StartIcon="@Icons.Material.Filled.Download" Disabled="Filtered.Count == 0"
+                           OnClick="ExportCsvAsync">Exportar CSV</MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <MudGrid Spacing="3" Class="mb-2">
+        <MudItem xs="12" md="4">
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Total del período</MudText>
+                <MudText Typo="Typo.h5">@Filtered.Sum(s => s.TotalAmount).ToString("C")</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Ventas</MudText>
+                <MudText Typo="Typo.h5">@Filtered.Count</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Ticket promedio</MudText>
+                <MudText Typo="Typo.h5">@AverageTicket.ToString("C")</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <MudText Typo="Typo.h6" Class="mb-2">Totales por método de pago</MudText>
+        <MudTable Items="@ByPaymentMethod" Hover Dense>
+            <HeaderContent>
+                <MudTh>Método</MudTh>
+                <MudTh Style="text-align: right">Ventas</MudTh>
+                <MudTh Style="text-align: right">Total</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.Method</MudTd>
+                <MudTd Style="text-align: right">@context.Count</MudTd>
+                <MudTd Style="text-align: right">@context.Total.ToString("C")</MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+
+    <MudPaper Class="pa-4" Elevation="2">
+        <MudText Typo="Typo.h6" Class="mb-2">Detalle de ventas</MudText>
+        @if (Filtered.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">No hay ventas en el período seleccionado.</MudText>
+        }
+        else
+        {
+            <MudTable Items="@Filtered" Hover Dense Striped>
+                <HeaderContent>
+                    <MudTh>#</MudTh>
+                    <MudTh>Fecha</MudTh>
+                    <MudTh>Vendedor</MudTh>
+                    <MudTh>Método</MudTh>
+                    <MudTh Style="text-align: right">Items</MudTh>
+                    <MudTh Style="text-align: right">Total</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.Id</MudTd>
+                    <MudTd>@context.SaleDate.ToString("dd/MM/yyyy HH:mm")</MudTd>
+                    <MudTd>@context.User?.Name</MudTd>
+                    <MudTd>@context.PaymentMethod</MudTd>
+                    <MudTd Style="text-align: right">@(context.SaleDetails?.Sum(d => d.Quantity) ?? 0)</MudTd>
+                    <MudTd Style="text-align: right">@context.TotalAmount.ToString("C")</MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudPaper>
+}
+
+@code {
+    private bool _loading = true;
+    private string? _error;
+    private List<Sale> _allSales = new();
+    private DateTime? _from = DateTime.Today.AddDays(-30);
+    private DateTime? _to = DateTime.Today;
+
+    private record PaymentTotal(string Method, int Count, decimal Total);
+
+    private List<Sale> Filtered
+    {
+        get
+        {
+            var from = (_from ?? DateTime.MinValue).Date;
+            var to = (_to ?? DateTime.MaxValue).Date;
+            return _allSales.Where(s => s.SaleDate.Date >= from && s.SaleDate.Date <= to).ToList();
+        }
+    }
+
+    private decimal AverageTicket => Filtered.Count == 0 ? 0 : Filtered.Sum(s => s.TotalAmount) / Filtered.Count;
+
+    private List<PaymentTotal> ByPaymentMethod => Filtered
+        .GroupBy(s => s.PaymentMethod)
+        .Select(g => new PaymentTotal(g.Key.ToString(), g.Count(), g.Sum(s => s.TotalAmount)))
+        .OrderByDescending(g => g.Total)
+        .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthState.InitializeAsync();
+        if (!AuthState.IsAuthenticated || !AuthState.IsAdmin)
+        {
+            _loading = false;
+            return;
+        }
+        try
+        {
+            _allSales = await SaleApi.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"No se pudieron cargar las ventas: {ex.Message}";
+        }
+        _loading = false;
+    }
+
+    private void Apply()
+    {
+        if (_from.HasValue && _to.HasValue && _from.Value.Date > _to.Value.Date)
+        {
+            (_from, _to) = (_to, _from);
+        }
+        StateHasChanged();
+    }
+
+    private async Task ExportCsvAsync()
+    {
+        var sales = Filtered;
+        if (sales.Count == 0)
+        {
+            return;
+        }
+
+        var csv = new System.Text.StringBuilder();
+        csv.AppendLine("Venta;Fecha;Vendedor;Metodo;Items;Total");
+        foreach (var sale in sales)
+        {
+            var items = sale.SaleDetails?.Sum(d => d.Quantity) ?? 0;
+            csv.AppendLine(string.Join(";",
+                sale.Id,
+                Escape(sale.SaleDate.ToString("dd/MM/yyyy HH:mm")),
+                Escape(sale.User?.Name ?? string.Empty),
+                Escape(sale.PaymentMethod.ToString()),
+                items,
+                sale.TotalAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)));
+        }
+
+        var fileName = $"ventas_{(_from ?? DateTime.Today):yyyyMMdd}_{(_to ?? DateTime.Today):yyyyMMdd}.csv";
+        var content = ((char)0xFEFF).ToString() + csv;
+        await JS.InvokeVoidAsync("posDownload", fileName, content, "text/csv;charset=utf-8");
+    }
+
+    private static string Escape(string value)
+    {
+        const char quote = (char)34;
+        var doubled = new string(quote, 2);
+        return quote + value.Replace(quote.ToString(), doubled) + quote;
+    }
+}

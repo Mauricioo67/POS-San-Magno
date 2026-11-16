@@ -1,0 +1,89 @@
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+
+<MudText Typo="Typo.h6" Class="mb-1">Venta #@Sale?.Id</MudText>
+<MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">
+    @Sale?.SaleDate.ToString("dd/MM/yyyy HH:mm")
+</MudText>
+
+<MudSimpleTable Dense Hover>
+    <thead>
+        <tr>
+            <th>Producto</th>
+            <th Style="text-align: right">Cant.</th>
+            <th Style="text-align: right">Precio</th>
+            <th Style="text-align: right">Subtotal</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var line in Lines)
+        {
+            <tr>
+                <td>@line.Name</td>
+                <td Style="text-align: right">@line.Quantity</td>
+                <td Style="text-align: right">@line.UnitPrice.ToString("C")</td>
+                <td Style="text-align: right">@line.Total.ToString("C")</td>
+            </tr>
+        }
+    </tbody>
+</MudSimpleTable>
+
+<MudDivider Class="my-3" />
+
+<div class="d-flex justify-space-between align-center">
+    <MudText Typo="Typo.subtitle1">Total</MudText>
+    <MudText Typo="Typo.h6">@Total.ToString("C")</MudText>
+</div>
+
+<MudText Typo="Typo.body2" Class="mt-2">Método de pago: <strong>@Sale?.PaymentMethod</strong></MudText>
+
+@if (IsCash)
+{
+    <MudText Typo="Typo.body2">Efectivo recibido: @CashReceived.ToString("C")</MudText>
+    <MudText Typo="Typo.body2">Vuelto: <strong>@Change.ToString("C")</strong></MudText>
+}
+
+<div class="d-flex justify-end gap-2 mt-4">
+    <MudButton OnClick="CopySummary">Copiar resumen</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Close">Cerrar</MudButton>
+</div>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public Sale? Sale { get; set; }
+
+    [Parameter]
+    public List<ReceiptLine> Lines { get; set; } = new();
+
+    [Parameter]
+    public bool IsCash { get; set; }
+
+    [Parameter]
+    public decimal CashReceived { get; set; }
+
+    private decimal Total => Lines.Sum(l => l.Total);
+    private decimal Change => Math.Max(0, CashReceived - Total);
+
+    private void Close() => MudDialog.Close();
+
+    private async Task CopySummary()
+    {
+        var summary = $"Venta #{Sale?.Id} - {Sale?.SaleDate:dd/MM/yyyy HH:mm}\n" +
+                      string.Join("\n", Lines.Select(l => $"{l.Quantity} x {l.Name} = {l.Total:C}")) +
+                      $"\nTotal: {Total:C}";
+        var copied = await JS.InvokeAsync<bool>("posCopy", summary);
+        Snackbar.Add(copied ? "Resumen copiado" : "No se pudo copiar el resumen",
+            copied ? Severity.Success : Severity.Warning);
+    }
+
+    public class ReceiptLine
+    {
+        public string Name { get; set; } = string.Empty;
+        public int Quantity { get; set; }
+        public decimal UnitPrice { get; set; }
+        public decimal Total => UnitPrice * Quantity;
+    }
+}

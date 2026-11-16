@@ -1,0 +1,157 @@
+﻿@page "/categories"
+@inject CategoryApiService CategoryApi
+@inject AuthStateService AuthState
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Categorías - App POS</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Categorías</MudText>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate />
+}
+else if (!AuthState.IsAuthenticated)
+{
+    <MudAlert Severity="Severity.Warning">Debe iniciar sesión para ver esta sección.</MudAlert>
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+}
+else
+{
+    @if (AuthState.IsAdmin)
+    {
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="OpenCreateDialog" Class="mb-3">Nueva categoría</MudButton>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-3">
+            Puedes consultar categorías, pero crear, editar y eliminar requiere una cuenta Administrador.
+            Tu rol actual es @AuthState.Role. Solicita a un administrador que lo cambie desde Usuarios.
+        </MudAlert>
+    }
+    <MudTable Items="@_categories" Hover Striped Dense>
+        <HeaderContent>
+            <MudTh>Id</MudTh>
+            <MudTh>Nombre</MudTh>
+            <MudTh>Descripción</MudTh>
+            <MudTh Style="width: 140px;">Acciones</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.Id</MudTd>
+            <MudTd>@context.Name</MudTd>
+            <MudTd>@context.Description</MudTd>
+            <MudTd>
+                @if (AuthState.IsAdmin)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary"
+                                   OnClick="() => OpenEditDialog(context)" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="() => DeleteAsync(context)" />
+                }
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+@code {
+    private bool _loading = true;
+    private string? _error;
+    private List<Category> _categories = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthState.InitializeAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        if (!AuthState.IsAuthenticated)
+        {
+            _loading = false;
+            return;
+        }
+        try
+        {
+            _categories = await CategoryApi.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"No se pudieron cargar las categorías: {ex.Message}";
+        }
+        _loading = false;
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var category = new Category();
+        var result = await ShowDialog(category, "Nueva categoría");
+        if (result)
+        {
+            var (success, error) = await CategoryApi.CreateAsync(category);
+            if (success)
+            {
+                Snackbar.Add("Categoría creada", Severity.Success);
+                await LoadAsync();
+            }
+            else
+            {
+                Snackbar.Add(error ?? "Error al crear", Severity.Error);
+            }
+        }
+    }
+
+    private async Task OpenEditDialog(Category existing)
+    {
+        var category = new Category { Id = existing.Id, Name = existing.Name, Description = existing.Description };
+        var result = await ShowDialog(category, "Editar categoría");
+        if (result)
+        {
+            var (success, error) = await CategoryApi.UpdateAsync(category);
+            if (success)
+            {
+                Snackbar.Add("Categoría actualizada", Severity.Success);
+                await LoadAsync();
+            }
+            else
+            {
+                Snackbar.Add(error ?? "Error al actualizar", Severity.Error);
+            }
+        }
+    }
+
+    private async Task<bool> ShowDialog(Category category, string title)
+    {
+        var parameters = new DialogParameters { ["Category"] = category };
+        var dialog = await DialogService.ShowAsync<CategoryDialog>(title, parameters);
+        var result = await dialog.Result;
+        return result is { Canceled: false, Data: not null };
+    }
+
+    private async Task DeleteAsync(Category category)
+    {
+        var parameters = new DialogParameters { ["Message"] = $"¿Eliminar la categoría '{category.Name}'?" };
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Confirmar", parameters);
+        var confirmed = (await dialog.Result) is { Canceled: false, Data: not null };
+        if (confirmed)
+        {
+            var (success, error) = await CategoryApi.DeleteAsync(category.Id);
+            if (success)
+            {
+                Snackbar.Add("Categoría eliminada", Severity.Success);
+                await LoadAsync();
+            }
+            else
+            {
+                Snackbar.Add(error ?? "No se pudo eliminar", Severity.Error);
+            }
+        }
+    }
+}

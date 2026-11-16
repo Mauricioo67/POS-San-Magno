@@ -1,0 +1,156 @@
+﻿@page "/opencashclosing"
+@inject CashClosingApiService CashClosingApi
+@inject AuthStateService AuthState
+@inject ISnackbar Snackbar
+
+<PageTitle>Cierre de caja - App POS</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Cierre de caja</MudText>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate />
+}
+else if (!AuthState.IsAuthenticated)
+{
+    <MudAlert Severity="Severity.Warning">Debe iniciar sesión para ver esta sección.</MudAlert>
+}
+else if (!AuthState.IsAdmin)
+{
+    <MudAlert Severity="Severity.Warning">Solo los administradores pueden gestionar los cierres de caja.</MudAlert>
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+}
+else
+{
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <MudText Typo="Typo.h6" Class="mb-2">Realizar cierre</MudText>
+        @if (_lastClosing != null)
+        {
+            <MudText Typo="Typo.body2" Class="mb-2">
+                Último cierre: @_lastClosing.EndDate.ToString("dd/MM/yyyy HH:mm") — Saldo final: @_lastClosing.FinalBalance.ToString("C")
+            </MudText>
+        }
+        <MudGrid Spacing="2">
+            <MudItem xs="12" md="3">
+                <MudNumericField @bind-Value="_initialBalance" Label="Saldo inicial" Min="0" />
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudNumericField @bind-Value="_adjustments" Label="Ajustes" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudTextField @bind-Value="_notes" Label="Notas" MaxLines="1" />
+            </MudItem>
+            <MudItem xs="12" md="2">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth StartIcon="@Icons.Material.Filled.Summarize"
+                           Disabled="_saving" OnClick="CreateClosingAsync">Cerrar caja</MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <MudTable Items="@_closings" Hover Striped Dense>
+        <HeaderContent>
+            <MudTh>#</MudTh>
+            <MudTh>Inicio</MudTh>
+            <MudTh>Fin</MudTh>
+            <MudTh Style="text-align: right">Saldo inicial</MudTh>
+            <MudTh Style="text-align: right">Efectivo</MudTh>
+            <MudTh Style="text-align: right">Tarjeta</MudTh>
+            <MudTh Style="text-align: right">Transferencia</MudTh>
+            <MudTh Style="text-align: right">Ajustes</MudTh>
+            <MudTh Style="text-align: right">Saldo final</MudTh>
+            <MudTh>Usuario</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.Id</MudTd>
+            <MudTd>@context.StartDate.ToString("dd/MM/yyyy HH:mm")</MudTd>
+            <MudTd>@context.EndDate.ToString("dd/MM/yyyy HH:mm")</MudTd>
+            <MudTd Style="text-align: right">@context.InitialBalance.ToString("C")</MudTd>
+            <MudTd Style="text-align: right">@context.TotalCash.ToString("C")</MudTd>
+            <MudTd Style="text-align: right">@context.TotalCard.ToString("C")</MudTd>
+            <MudTd Style="text-align: right">@context.TotalTransfer.ToString("C")</MudTd>
+            <MudTd Style="text-align: right">@context.TotalAdjustments.ToString("C")</MudTd>
+            <MudTd Style="text-align: right"><strong>@context.FinalBalance.ToString("C")</strong></MudTd>
+            <MudTd>@context.User?.Name</MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+@code {
+    private bool _loading = true;
+    private bool _saving = false;
+    private string? _error;
+    private decimal _initialBalance;
+    private decimal _adjustments;
+    private string _notes = string.Empty;
+    private List<POS.Shared.Entities.CashClosing> _closings = new();
+    private POS.Shared.Entities.CashClosing? _lastClosing;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthState.InitializeAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        if (!AuthState.IsAuthenticated || !AuthState.IsAdmin)
+        {
+            _loading = false;
+            return;
+        }
+        try
+        {
+            _closings = await CashClosingApi.GetAllAsync();
+            _lastClosing = await CashClosingApi.GetLastAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"No se pudieron cargar los cierres de caja: {ex.Message}";
+        }
+        _loading = false;
+    }
+
+    private async Task CreateClosingAsync()
+    {
+        if (!AuthState.IsAdmin)
+        {
+            return;
+        }
+        _saving = true;
+        try
+        {
+            var request = new CashClosingRequest
+            {
+                InitialBalance = _initialBalance,
+                TotalAdjustments = _adjustments,
+                UserId = AuthState.UserId,
+                Notes = _notes
+            };
+            var (success, closing, error) = await CashClosingApi.CreateAsync(request);
+            if (success && closing != null)
+            {
+                Snackbar.Add($"Cierre #{closing.Id} realizado. Saldo final: {closing.FinalBalance:C}", Severity.Success);
+                _notes = string.Empty;
+                await LoadAsync();
+            }
+            else
+            {
+                Snackbar.Add(error ?? "Error al realizar el cierre", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al realizar el cierre: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+        StateHasChanged();
+    }
+}
