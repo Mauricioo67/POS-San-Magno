@@ -13,7 +13,7 @@ namespace POS.Server.Repositories
         }
         public async Task<List<Stock>> GetAllAsync(int? productId = null)
         {
-            var query = _context.Stocks.Include(s => s.Product).Include(s => s.User).AsQueryable();
+            var query = _context.Stocks.AsNoTracking().Include(s => s.Product).Include(s => s.User).AsQueryable();
             if (productId.HasValue)
             {
                 query = query.Where(s => s.ProductId == productId.Value);

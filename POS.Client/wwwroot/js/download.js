@@ -1,3 +1,12 @@
+window.posApplyTheme = function (isDark) {
+    var dark = !!isDark;
+    document.documentElement.classList.toggle('pos-dark', dark);
+    document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+    if (document.body) {
+        document.body.classList.toggle('pos-dark', dark);
+    }
+};
+
 window.posDownload = function (fileName, content, mimeType) {
     const blob = new Blob([content], { type: mimeType || 'application/octet-stream' });
     const url = URL.createObjectURL(blob);

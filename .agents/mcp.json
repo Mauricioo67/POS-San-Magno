@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "mcp-visual": {
+      "command": "node",
+      "args": ["C:/Users/HP/Downloads/mcp/mcp-visual/dist/server/index.js"],
+      "env": {
+        "PROJECT_ROOT": "C:/Users/HP/Downloads/proyecto/POS"
+      }
+    }
+  }
+}

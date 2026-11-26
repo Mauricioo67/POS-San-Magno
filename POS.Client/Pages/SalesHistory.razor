@@ -1,0 +1,228 @@
+@page "/sales/history"
+@inject SaleApiService SaleApi
+@inject AuthStateService AuthState
+@inject IDialogService DialogService
+@inject IJSRuntime JS
+
+<PageTitle>Historial de ventas - App POS</PageTitle>
+
+<PageHeader Title="Historial de ventas"
+            Eyebrow="Operación"
+            Description="Consulta todas las ventas registradas, filtra por período y revisa el detalle de cada transacción."
+            Icon="@Icons.Material.Filled.ReceiptLong">
+    <Actions>
+        <MudButton Variant="Variant.Filled" Color="Color.Inherit" Class="pos-btn-light"
+                   StartIcon="@Icons.Material.Filled.Download" Disabled="Filtered.Count == 0"
+                   OnClick="ExportCsvAsync">Exportar CSV</MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Inherit" Class="pos-btn-ghost"
+                   StartIcon="@Icons.Material.Filled.PointOfSale" Href="/sales">Nueva venta</MudButton>
+    </Actions>
+</PageHeader>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate Color="Color.Primary" />
+}
+else if (!AuthState.IsAuthenticated)
+{
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">Debe iniciar sesión para ver esta sección.</MudAlert>
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_error</MudAlert>
+}
+else
+{
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Ventas filtradas" Value="@Filtered.Count.ToString()" Hint="Transacciones del período"
+                      Icon="@Icons.Material.Filled.ReceiptLong" Accent="linear-gradient(135deg,#4f46e5,#7c3aed)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Total vendido" Value="@Filtered.Sum(s => s.TotalAmount).ToString("C")"
+                      Hint="Monto del período" Icon="@Icons.Material.Filled.Payments"
+                      Accent="linear-gradient(135deg,#06b6d4,#0ea5e9)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Ticket promedio" Value="@AverageTicket.ToString("C")" Hint="Promedio por venta"
+                      Icon="@Icons.Material.Filled.TrendingUp" Accent="linear-gradient(135deg,#ec4899,#f59e0b)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Artículos" Value="@Filtered.Sum(s => s.SaleDetails?.Sum(d => d.Quantity) ?? 0).ToString()"
+                      Hint="Unidades vendidas" Icon="@Icons.Material.Filled.Inventory2"
+                      Accent="linear-gradient(135deg,#10b981,#84cc16)" />
+        </MudItem>
+    </MudGrid>
+
+    <MudPaper Class="pos-card pos-card-pad mb-4" Elevation="0">
+        <MudGrid Spacing="2">
+            <MudItem xs="12" md="3">
+                <MudTextField @bind-Value="_search" Placeholder="Buscar vendedor o # venta" Variant="Variant.Outlined"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="2">
+                <MudDatePicker @bind-Date="_from" Label="Desde" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="2">
+                <MudDatePicker @bind-Date="_to" Label="Hasta" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudSelect @bind-Value="_methodFilter" Label="Método" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("Todos")">Todos</MudSelectItem>
+                    <MudSelectItem Value="@("Efectivo")">Efectivo</MudSelectItem>
+                    <MudSelectItem Value="@("Tarjeta")">Tarjeta</MudSelectItem>
+                    <MudSelectItem Value="@("Transferencia")">Transferencia</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="2">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth
+                           StartIcon="@Icons.Material.Filled.FilterAlt" OnClick="Apply">Filtrar</MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <MudPaper Class="pos-card pos-table-card" Elevation="0">
+        @if (Filtered.Count == 0)
+        {
+            <EmptyState Title="Sin ventas"
+                        Text="No hay ventas que coincidan con los filtros seleccionados."
+                        Icon="@Icons.Material.Filled.SearchOff" />
+        }
+        else
+        {
+            <MudTable Items="@Filtered" Hover Dense Striped Breakpoint="Breakpoint.Sm">
+                <HeaderContent>
+                    <MudTh>#</MudTh>
+                    <MudTh>Fecha</MudTh>
+                    <MudTh>Vendedor</MudTh>
+                    <MudTh>Método</MudTh>
+                    <MudTh Style="text-align: right">Items</MudTh>
+                    <MudTh Style="text-align: right">Total</MudTh>
+                    <MudTh Style="text-align: right">Detalle</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd><span class="pos-cell-primary">@context.Id</span></MudTd>
+                    <MudTd>@context.SaleDate.ToString("dd/MM/yyyy HH:mm")</MudTd>
+                    <MudTd Class="pos-cell-muted">@context.User?.Name</MudTd>
+                    <MudTd>
+                        <MudChip T="string" Size="Size.Small" Color="@MethodColor(context.PaymentMethod.ToString())">
+                            @context.PaymentMethod
+                        </MudChip>
+                    </MudTd>
+                    <MudTd Style="text-align: right">@(context.SaleDetails?.Sum(d => d.Quantity) ?? 0)</MudTd>
+                    <MudTd Style="text-align: right" Class="pos-money">@context.TotalAmount.ToString("C")</MudTd>
+                    <MudTd Style="text-align: right">
+                        <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Color="Color.Primary"
+                                       aria-label="Ver detalle" OnClick="() => ShowDetailAsync(context)" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudPaper>
+}
+
+@code {
+    private bool _loading = true;
+    private string? _error;
+    private string _search = string.Empty;
+    private string _methodFilter = "Todos";
+    private List<Sale> _sales = new();
+    private DateTime? _from = DateTime.Today.AddDays(-30);
+    private DateTime? _to = DateTime.Today;
+
+    private List<Sale> Filtered
+    {
+        get
+        {
+            var from = (_from ?? DateTime.MinValue).Date;
+            var to = (_to ?? DateTime.MaxValue).Date;
+            return _sales
+                .Where(s => s.SaleDate.Date >= from && s.SaleDate.Date <= to)
+                .Where(s => _methodFilter == "Todos" || s.PaymentMethod.ToString() == _methodFilter)
+                .Where(s => string.IsNullOrWhiteSpace(_search)
+                            || s.Id.ToString().Contains(_search, StringComparison.OrdinalIgnoreCase)
+                            || (s.User?.Name.Contains(_search, StringComparison.OrdinalIgnoreCase) ?? false))
+                .OrderByDescending(s => s.SaleDate)
+                .ToList();
+        }
+    }
+
+    private decimal AverageTicket => Filtered.Count == 0 ? 0 : Filtered.Sum(s => s.TotalAmount) / Filtered.Count;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthState.InitializeAsync();
+        if (!AuthState.IsAuthenticated)
+        {
+            _loading = false;
+            return;
+        }
+        try
+        {
+            _sales = await SaleApi.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"No se pudieron cargar las ventas: {ex.Message}";
+        }
+        _loading = false;
+    }
+
+    private void Apply()
+    {
+        if (_from.HasValue && _to.HasValue && _from.Value.Date > _to.Value.Date)
+        {
+            (_from, _to) = (_to, _from);
+        }
+        StateHasChanged();
+    }
+
+    private static Color MethodColor(string method) => method switch
+    {
+        "Efectivo" => Color.Success,
+        "Tarjeta" => Color.Info,
+        "Transferencia" => Color.Secondary,
+        _ => Color.Default
+    };
+
+    private async Task ShowDetailAsync(Sale sale)
+    {
+        var parameters = new DialogParameters { ["Sale"] = sale };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        await DialogService.ShowAsync<SaleDetailDialog>($"Venta #{sale.Id}", parameters, options);
+    }
+
+    private async Task ExportCsvAsync()
+    {
+        var sales = Filtered;
+        if (sales.Count == 0)
+        {
+            return;
+        }
+
+        var csv = new System.Text.StringBuilder();
+        csv.AppendLine("Venta;Fecha;Vendedor;Metodo;Items;Total");
+        foreach (var sale in sales)
+        {
+            var items = sale.SaleDetails?.Sum(d => d.Quantity) ?? 0;
+            csv.AppendLine(string.Join(";",
+                sale.Id,
+                Escape(sale.SaleDate.ToString("dd/MM/yyyy HH:mm")),
+                Escape(sale.User?.Name ?? string.Empty),
+                Escape(sale.PaymentMethod.ToString()),
+                items,
+                sale.TotalAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)));
+        }
+
+        var fileName = $"historial_ventas_{(_from ?? DateTime.Today):yyyyMMdd}_{(_to ?? DateTime.Today):yyyyMMdd}.csv";
+        var content = ((char)0xFEFF).ToString() + csv;
+        await JS.InvokeVoidAsync("posDownload", fileName, content, "text/csv;charset=utf-8");
+    }
+
+    private static string Escape(string value)
+    {
+        const char quote = (char)34;
+        var doubled = new string(quote, 2);
+        return quote + value.Replace(quote.ToString(), doubled) + quote;
+    }
+}

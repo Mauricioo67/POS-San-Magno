@@ -4,78 +4,157 @@
 @inject AuthStateService AuthState
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject NavigationManager Navigation
 
 <PageTitle>Productos - App POS</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-4">Productos</MudText>
+<PageHeader Title="Productos"
+            Eyebrow="Catálogo"
+            Description="Administra precios, categorías, existencias y alertas de stock mínimo."
+            Icon="@Icons.Material.Filled.Inventory2">
+    <Actions>
+        @if (AuthState.IsAdmin)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Inherit" Class="pos-btn-light"
+                       StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateDialog">Nuevo producto</MudButton>
+        }
+        <MudButton Variant="Variant.Outlined" Color="Color.Inherit" Class="pos-btn-ghost"
+                   StartIcon="@Icons.Material.Filled.Inventory" OnClick="@(() => Navigation.NavigateTo("/stock"))">
+            Movimientos
+        </MudButton>
+    </Actions>
+</PageHeader>
 
 @if (_loading)
 {
-    <MudProgressLinear Indeterminate />
+    <MudProgressLinear Indeterminate Color="Color.Primary" />
 }
 else if (!AuthState.IsAuthenticated)
 {
-    <MudAlert Severity="Severity.Warning">Debe iniciar sesión para ver esta sección.</MudAlert>
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">Debe iniciar sesión para ver esta sección.</MudAlert>
 }
 else if (_error != null)
 {
-    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_error</MudAlert>
 }
 else
 {
-    @if (AuthState.IsAdmin)
-    {
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
-                   OnClick="OpenCreateDialog" Class="mb-3">Nuevo producto</MudButton>
-    }
-    <MudTextField @bind-Value="_search" Placeholder="Buscar por código o nombre" Adornment="Adornment.Start"
-                  AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mb-3" MaxLines="1"
-                  Immediate="true" />
-    <MudTable Items="@FilteredProducts" Hover Striped Dense>
-        <HeaderContent>
-            <MudTh>Código</MudTh>
-            <MudTh>Nombre</MudTh>
-            <MudTh>Categoría</MudTh>
-            <MudTh Style="text-align: right">Precio</MudTh>
-            <MudTh Style="text-align: right">Stock actual</MudTh>
-            <MudTh Style="text-align: right">Stock mínimo</MudTh>
-            <MudTh>Activo</MudTh>
-            <MudTh Style="width: 100px;">Acciones</MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd>@context.Code</MudTd>
-            <MudTd>@context.Name</MudTd>
-            <MudTd>@context.Category?.Name</MudTd>
-            <MudTd Style="text-align: right">@context.Price.ToString("C")</MudTd>
-            <MudTd Style="text-align: right">
-                <span class="@LowStockClass(context)">@context.CurrentStock</span>
-            </MudTd>
-            <MudTd Style="text-align: right">@context.StockMinimun</MudTd>
-            <MudTd><MudCheckBox ReadOnly Value="@context.IsActive" Disabled="true" /></MudTd>
-            <MudTd>
-                 @if (AuthState.IsAdmin)
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Productos" Value="@_products.Count.ToString()" Hint="En el catálogo"
+                      Icon="@Icons.Material.Filled.Category" Accent="linear-gradient(135deg,#4f46e5,#7c3aed)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Activos" Value="@_products.Count(p => p.IsActive).ToString()" Hint="Disponibles para venta"
+                      Icon="@Icons.Material.Filled.CheckCircle" Accent="linear-gradient(135deg,#10b981,#06b6d4)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Stock bajo" Value="@LowStockCount.ToString()" Hint="Requieren reposición"
+                      Icon="@Icons.Material.Filled.WarningAmber"
+                      Accent="@(LowStockCount > 0 ? "linear-gradient(135deg,#ef4444,#f59e0b)" : "linear-gradient(135deg,#10b981,#84cc16)")" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Valor inventario" Value="@InventoryValue.ToString("C")" Hint="Precio × stock actual"
+                      Icon="@Icons.Material.Filled.Savings" Accent="linear-gradient(135deg,#ec4899,#7c3aed)" />
+        </MudItem>
+    </MudGrid>
+
+    <div class="pos-toolbar">
+        <div class="pos-toolbar-filters">
+            <MudTextField @bind-Value="_search" Placeholder="Buscar por código o nombre" Variant="Variant.Outlined"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true" Class="pos-search" Margin="Margin.Dense" />
+            <MudSelect @bind-Value="_categoryFilter" Variant="Variant.Outlined" Margin="Margin.Dense"
+                       Label="Categoría" Style="min-width: 210px;">
+                <MudSelectItem Value="0">Todas las categorías</MudSelectItem>
+                @foreach (var category in _categories)
                 {
-                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary"
-                                   aria-label="Editar producto" OnClick="() => OpenEditDialog(context)" />
-                    @if (context.IsActive)
-                    {
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
-                                       aria-label="Desactivar producto" OnClick="() => DeactivateAsync(context)" />
-                    }
+                    <MudSelectItem Value="@category.Id">@category.Name</MudSelectItem>
                 }
-                <MudIconButton Icon="@Icons.Material.Filled.Inventory" Size="Size.Small" Color="Color.Info"
-                               aria-label="Movimiento de stock" OnClick="() => GoToStock(context.Id)" />
-            </MudTd>
-        </RowTemplate>
-    </MudTable>
+            </MudSelect>
+        </div>
+        <span class="pos-pill">
+            <MudIcon Icon="@Icons.Material.Filled.FilterList" Size="Size.Small" />
+            @FilteredProducts.Count() resultado(s)
+        </span>
+    </div>
+
+    <MudPaper Class="pos-card pos-table-card" Elevation="0">
+        @if (!FilteredProducts.Any())
+        {
+            <EmptyState Title="Sin productos"
+                        Text="Ajusta los filtros o crea un nuevo producto para comenzar."
+                        Icon="@Icons.Material.Filled.Inventory2" />
+        }
+        else
+        {
+            <MudTable Items="@FilteredProducts" Hover Dense Breakpoint="Breakpoint.Md">
+                <HeaderContent>
+                    <MudTh>Código</MudTh>
+                    <MudTh>Producto</MudTh>
+                    <MudTh>Categoría</MudTh>
+                    <MudTh Style="text-align: right">Precio</MudTh>
+                    <MudTh Style="text-align: right">Stock</MudTh>
+                    <MudTh Style="text-align: right">Mínimo</MudTh>
+                    <MudTh>Estado</MudTh>
+                    <MudTh Style="text-align: right">Acciones</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd><span class="pos-mono pos-cell-muted">@context.Code</span></MudTd>
+                    <MudTd>
+                        <div class="pos-cell-primary">@context.Name</div>
+                        <div class="pos-cell-muted">@context.Description</div>
+                    </MudTd>
+                    <MudTd><span class="pos-pill">@context.Category?.Name</span></MudTd>
+                    <MudTd Style="text-align: right" Class="pos-money">@context.Price.ToString("C")</MudTd>
+                    <MudTd Style="text-align: right">
+                        <MudChip T="string" Size="Size.Small" Color="@StockColor(context)">@context.CurrentStock</MudChip>
+                    </MudTd>
+                    <MudTd Style="text-align: right">@context.StockMinimun</MudTd>
+                    <MudTd>
+                        <MudChip T="string" Size="Size.Small" Color="@(context.IsActive ? Color.Success : Color.Default)">
+                            @(context.IsActive ? "Activo" : "Inactivo")
+                        </MudChip>
+                    </MudTd>
+                    <MudTd Style="text-align: right">
+                        <div class="d-flex justify-end">
+                            @if (AuthState.IsAdmin)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary"
+                                               aria-label="Editar producto" OnClick="() => OpenEditDialog(context)" />
+                                @if (context.IsActive)
+                                {
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                                   aria-label="Desactivar producto" OnClick="() => DeactivateAsync(context)" />
+                                }
+                            }
+                            <MudIconButton Icon="@Icons.Material.Filled.Inventory" Size="Size.Small" Color="Color.Info"
+                                           aria-label="Movimiento de stock" OnClick="() => GoToStock(context.Id)" />
+                        </div>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudPaper>
 }
 
 @code {
     private bool _loading = true;
     private string? _error;
     private string _search = string.Empty;
+    private int _categoryFilter;
     private List<Product> _products = new();
     private List<Category> _categories = new();
+
+    private int LowStockCount => _products.Count(p => p.IsActive && p.CurrentStock <= p.StockMinimun);
+    private decimal InventoryValue => _products.Sum(p => p.Price * p.CurrentStock);
+
+    private IEnumerable<Product> FilteredProducts =>
+        _products.Where(p => string.IsNullOrWhiteSpace(_search)
+                             || p.Code.Contains(_search, StringComparison.OrdinalIgnoreCase)
+                             || p.Name.Contains(_search, StringComparison.OrdinalIgnoreCase))
+                 .Where(p => _categoryFilter == 0 || p.CategoryId == _categoryFilter)
+                 .OrderBy(p => p.Name);
 
     protected override async Task OnInitializedAsync()
     {
@@ -83,14 +162,10 @@ else
         await LoadAsync();
     }
 
-    private IEnumerable<Product> FilteredProducts =>
-        string.IsNullOrWhiteSpace(_search)
-            ? _products
-            : _products.Where(p => p.Code.Contains(_search, StringComparison.OrdinalIgnoreCase)
-                                || p.Name.Contains(_search, StringComparison.OrdinalIgnoreCase));
-
-    private string LowStockClass(Product product) =>
-        product.CurrentStock <= product.StockMinimun ? "mud-error-text pos-bold" : "";
+    private static Color StockColor(Product product) =>
+        product.CurrentStock <= 0 ? Color.Error
+        : product.CurrentStock <= product.StockMinimun ? Color.Warning
+        : Color.Success;
 
     private async Task LoadAsync()
     {
@@ -113,13 +188,7 @@ else
         _loading = false;
     }
 
-    private void GoToStock(int productId)
-    {
-        Navigation.NavigateTo($"/stock?productId={productId}");
-    }
-
-    [Inject]
-    public NavigationManager Navigation { get; set; } = default!;
+    private void GoToStock(int productId) => Navigation.NavigateTo($"/stock?productId={productId}");
 
     private async Task OpenCreateDialog()
     {
@@ -184,7 +253,8 @@ else
             ["Categories"] = _categories,
             ["IsNew"] = product.Id == 0
         };
-        var dialog = await DialogService.ShowAsync<ProductDialog>(title, parameters);
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        var dialog = await DialogService.ShowAsync<ProductDialog>(title, parameters, options);
         var result = await dialog.Result;
         return result is { Canceled: false, Data: not null };
     }

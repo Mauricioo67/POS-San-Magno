@@ -1,4 +1,4 @@
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using POS.Shared.DTOs;
 using POS.Shared.Entities;
 
@@ -10,14 +10,12 @@ namespace POS.Client.Services
 
         public async Task<List<Stock>> GetAllAsync(int? productId = null)
         {
-            SetAuthHeader();
             var url = productId.HasValue ? $"api/Stocks?productId={productId.Value}" : "api/Stocks";
             return await _http.GetFromJsonAsync<List<Stock>>(url) ?? new List<Stock>();
         }
 
         public async Task<(bool Success, string? Error)> CreateAsync(StockMovementRequest request)
         {
-            SetAuthHeader();
             var response = await _http.PostAsJsonAsync("api/Stocks", request);
             if (response.IsSuccessStatusCode)
             {

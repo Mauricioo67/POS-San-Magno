@@ -1,0 +1,27 @@
+@* Tarjeta de indicador reutilizable *@
+<div class="pos-stat pos-fade" style="@($"--pos-accent:{Accent};")">
+    <div class="pos-stat-top">
+        <div class="pos-stat-icon">
+            <MudIcon Icon="@Icon" Size="Size.Medium" />
+        </div>
+        @if (!string.IsNullOrWhiteSpace(Badge))
+        {
+            <span class="pos-pill">@Badge</span>
+        }
+    </div>
+    <MudText Typo="Typo.overline" Class="pos-stat-label">@Label</MudText>
+    <MudText Typo="Typo.h5" Class="pos-stat-value">@Value</MudText>
+    @if (!string.IsNullOrWhiteSpace(Hint))
+    {
+        <MudText Typo="Typo.caption" Class="pos-stat-hint">@Hint</MudText>
+    }
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public string Value { get; set; } = string.Empty;
+    [Parameter] public string Hint { get; set; } = string.Empty;
+    [Parameter] public string Badge { get; set; } = string.Empty;
+    [Parameter] public string Icon { get; set; } = Icons.Material.Filled.Insights;
+    [Parameter] public string Accent { get; set; } = "linear-gradient(135deg, #7c3aed, #ec4899)";
+}

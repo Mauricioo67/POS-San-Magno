@@ -1,5 +1,4 @@
 using System.Net.Http.Json;
-using System.Net.Http.Headers;
 
 namespace POS.Client.Services
 {
@@ -12,13 +11,6 @@ namespace POS.Client.Services
         {
             _http = http;
             _auth = auth;
-        }
-
-        protected void SetAuthHeader()
-        {
-            _http.DefaultRequestHeaders.Authorization = _auth.IsAuthenticated
-                ? new AuthenticationHeaderValue("Bearer", _auth.Token)
-                : null;
         }
 
         protected async Task<(bool Success, T? Result, string? Error)> ReadAsync<T>(HttpResponseMessage response)

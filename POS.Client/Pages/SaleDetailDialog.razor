@@ -1,0 +1,84 @@
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+
+<div class="d-flex align-center gap-3 mb-4">
+    <div class="pos-dialog-icon">
+        <MudIcon Icon="@Icons.Material.Filled.ReceiptLong" />
+    </div>
+    <div>
+        <MudText Typo="Typo.overline" Class="pos-kicker">Detalle de venta</MudText>
+        <MudText Typo="Typo.h6" Class="pos-dialog-title">Venta #@Sale.Id</MudText>
+        <MudText Typo="Typo.caption" Class="pos-cell-muted">@Sale.SaleDate.ToString("dd/MM/yyyy HH:mm")</MudText>
+    </div>
+</div>
+
+<MudGrid Spacing="2" Class="mb-3">
+    <MudItem xs="12" sm="6">
+        <MudText Typo="Typo.caption" Class="pos-kicker">Vendedor</MudText>
+        <MudText Typo="Typo.body1" Class="pos-bold">@Sale.User?.Name</MudText>
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudText Typo="Typo.caption" Class="pos-kicker">Método de pago</MudText>
+        <MudChip T="string" Size="Size.Small" Color="Color.Primary">@Sale.PaymentMethod</MudChip>
+    </MudItem>
+</MudGrid>
+
+<MudPaper Class="pos-card pos-table-card" Elevation="0">
+    <MudSimpleTable Dense Hover>
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th Style="text-align: right">Cant.</th>
+                <th Style="text-align: right">Precio</th>
+                <th Style="text-align: right">Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var line in Sale.SaleDetails)
+            {
+                <tr>
+                    <td class="pos-cell-primary">@line.Product?.Name</td>
+                    <td Style="text-align: right">@line.Quantity</td>
+                    <td Style="text-align: right">@line.UnitPrice.ToString("C")</td>
+                    <td Style="text-align: right" class="pos-money">@line.TotalPrice.ToString("C")</td>
+                </tr>
+            }
+        </tbody>
+    </MudSimpleTable>
+</MudPaper>
+
+<div class="pos-total-box mt-3">
+    <div>
+        <MudText Typo="Typo.caption" Class="pos-cell-muted">Total</MudText>
+        <MudText Typo="Typo.h4" class="pos-section-title" Style="line-height:1;">@Sale.TotalAmount.ToString("C")</MudText>
+    </div>
+    <MudText Typo="Typo.body2" Class="pos-cell-muted">
+        @(Sale.SaleDetails?.Sum(d => d.Quantity) ?? 0) artículo(s)
+    </MudText>
+</div>
+
+<div class="d-flex justify-end gap-2 mt-4">
+    <MudButton OnClick="CopySummary" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ContentCopy">Copiar</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Close">Cerrar</MudButton>
+</div>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public Sale Sale { get; set; } = new();
+
+    private void Close() => MudDialog.Close();
+
+    private async Task CopySummary()
+    {
+        var summary = $"Venta #{Sale.Id} - {Sale.SaleDate:dd/MM/yyyy HH:mm}\n" +
+                      string.Join("\n", Sale.SaleDetails.Select(l =>
+                          $"{l.Quantity} x {l.Product?.Name} = {l.TotalPrice:C}")) +
+                      $"\nTotal: {Sale.TotalAmount:C}";
+        var copied = await JS.InvokeAsync<bool>("posCopy", summary);
+        Snackbar.Add(copied ? "Resumen copiado" : "No se pudo copiar el resumen",
+            copied ? Severity.Success : Severity.Warning);
+    }
+}

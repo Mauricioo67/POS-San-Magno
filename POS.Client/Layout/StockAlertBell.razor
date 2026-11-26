@@ -1,0 +1,105 @@
+@inject StockAlertService StockAlerts
+@inject AuthStateService AuthState
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@implements IDisposable
+
+@if (AuthState.IsAuthenticated)
+{
+    <div class="d-flex align-center"
+         style="position: relative; cursor: pointer; padding: 6px;"
+         title="@BellTitle" aria-label="@BellTitle" role="button" tabindex="0"
+         @onclick="GoToAlerts">
+        <MudIcon Icon="@(StockAlerts.HasAlerts ? Icons.Material.Filled.NotificationsActive : Icons.Material.Filled.NotificationsNone)"
+                 Color="Color.Inherit" />
+        @if (StockAlerts.HasAlerts)
+        {
+            <span style="position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; padding: 0 4px;
+                         border-radius: 9px; background: #EF4444; color: #fff; font-size: .66rem; font-weight: 700;
+                         display: flex; align-items: center; justify-content: center; pointer-events: none;">
+                @StockAlerts.Count
+            </span>
+        }
+    </div>
+}
+
+@code {
+    private int _lastNotified = -1;
+
+    private string BellTitle => StockAlerts.HasAlerts
+        ? $"{StockAlerts.Count} producto(s) con stock bajo o agotado"
+        : "Sin alertas de stock";
+
+    protected override async Task OnInitializedAsync()
+    {
+        AuthState.OnChange += OnAuthChanged;
+        Navigation.LocationChanged += OnLocationChanged;
+        StockAlerts.Changed += OnStockChanged;
+
+        await AuthState.InitializeAsync();
+        await StockAlerts.RefreshAsync();
+    }
+
+    private void OnAuthChanged() => InvokeAsync(async () =>
+    {
+        if (!AuthState.IsAuthenticated)
+        {
+            _lastNotified = -1;
+        }
+        await StockAlerts.RefreshAsync();
+        StateHasChanged();
+    });
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => InvokeAsync(async () =>
+    {
+        await StockAlerts.RefreshAsync();
+        StateHasChanged();
+    });
+
+    private void OnStockChanged() => InvokeAsync(() =>
+    {
+        StateHasChanged();
+        NotifyIfNeeded();
+    });
+
+    private void NotifyIfNeeded()
+    {
+        if (!AuthState.IsAuthenticated)
+        {
+            return;
+        }
+
+        var count = StockAlerts.Count;
+        if (count == _lastNotified)
+        {
+            return;
+        }
+        _lastNotified = count;
+
+        if (count == 0)
+        {
+            return;
+        }
+
+        Snackbar.Add($"{count} producto(s) con stock bajo o agotado.",
+            Severity.Warning, options =>
+            {
+                options.Action = "Ver alertas";
+                options.ActionColor = Color.Inherit;
+                options.OnClick = _ =>
+                {
+                    Navigation.NavigateTo("/alerts");
+                    return Task.CompletedTask;
+                };
+            });
+    }
+
+    private void GoToAlerts() => Navigation.NavigateTo("/alerts");
+
+    public void Dispose()
+    {
+        AuthState.OnChange -= OnAuthChanged;
+        Navigation.LocationChanged -= OnLocationChanged;
+        StockAlerts.Changed -= OnStockChanged;
+    }
+}

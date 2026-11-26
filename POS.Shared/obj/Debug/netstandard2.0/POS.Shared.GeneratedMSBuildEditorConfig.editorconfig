@@ -1,6 +1,6 @@
 is_global = true
 build_property.RootNamespace = POS.Shared
-build_property.ProjectDir = C:\Users\HP\Downloads\desarrollo2\proyecto\POS\POS.Shared\
+build_property.ProjectDir = C:\Users\HP\Downloads\POS_SanMagno_Actualizado\POS.Shared\
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 
 build_property.CsWinRTUseWindowsUIXamlProjections = false

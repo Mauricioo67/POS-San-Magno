@@ -1,0 +1,22 @@
+@page "/access-denied"
+
+<PageTitle>Acceso denegado - App POS</PageTitle>
+
+<PageHeader Title="Acceso restringido"
+            Eyebrow="Seguridad"
+            Description="Tu cuenta no tiene permisos para entrar a esta sección del sistema."
+            Icon="@Icons.Material.Filled.Lock" />
+
+<MudPaper Class="pos-card pos-card-pad" Elevation="0">
+    <EmptyState Title="No tienes permisos"
+                Text="Si necesitas acceso, solicita a un administrador que actualice tu rol desde la sección Usuarios."
+                Icon="@Icons.Material.Filled.GppBad">
+        <div class="d-flex gap-2 flex-wrap justify-center">
+            <MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Home">
+                Volver al inicio
+            </MudButton>
+            <MudButton Href="/profile" Variant="Variant.Outlined" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.AccountCircle">Mi perfil</MudButton>
+        </div>
+    </EmptyState>
+</MudPaper>

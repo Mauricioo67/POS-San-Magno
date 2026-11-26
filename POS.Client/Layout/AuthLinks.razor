@@ -4,24 +4,38 @@
 
 @if (AuthState.IsAuthenticated)
 {
-    <div class="d-flex align-center">
-        <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Class="mr-2" />
-        <MudText Typo="Typo.body2" Class="mr-2">
-            <strong>@AuthState.FullName</strong>
-            <span class="mud-text-secondary"> · @AuthState.Role</span>
-        </MudText>
-        <MudIconButton Icon="@Icons.Material.Filled.Logout" Size="Size.Small" Color="Color.Inherit"
-                       title="Cerrar sesión" aria-label="Cerrar sesión" OnClick="LogoutAsync" />
-    </div>
+    <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+        <ActivatorContent>
+            <div class="d-flex align-center gap-2" style="cursor: pointer;">
+                <div class="pos-avatar-initial">@Initial</div>
+                <div class="d-none d-sm-block" style="line-height: 1.15;">
+                    <div style="font-size: .84rem; font-weight: 700;">@AuthState.FullName</div>
+                    <div style="font-size: .68rem; opacity: .75;">@AuthState.Role</div>
+                </div>
+                <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small" />
+            </div>
+        </ActivatorContent>
+        <ChildContent>
+            <MudMenuItem Icon="@Icons.Material.Filled.AccountCircle" OnClick="GoProfile">Mi perfil</MudMenuItem>
+            <MudMenuItem Icon="@Icons.Material.Filled.HelpOutline" OnClick="GoHelp">Ayuda</MudMenuItem>
+            <MudDivider Class="my-1" />
+            <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="LogoutAsync">Cerrar sesión</MudMenuItem>
+        </ChildContent>
+    </MudMenu>
 }
 else
 {
-    <MudButton Variant="Variant.Outlined" Color="Color.Inherit" Size="Size.Small"
+    <MudButton Variant="Variant.Filled" Color="Color.Inherit" Size="Size.Small" Class="pos-btn-light"
                StartIcon="@Icons.Material.Filled.Login"
                OnClick="@(() => Navigation.NavigateTo("/login"))">Iniciar sesión</MudButton>
 }
 
 @code {
+    private string Initial =>
+        string.IsNullOrWhiteSpace(AuthState.FullName)
+            ? "?"
+            : AuthState.FullName.Trim()[0].ToString().ToUpperInvariant();
+
     protected override async Task OnInitializedAsync()
     {
         AuthState.OnChange += OnAuthChanged;
@@ -31,6 +45,9 @@ else
     private void OnAuthChanged() => InvokeAsync(StateHasChanged);
 
     public void Dispose() => AuthState.OnChange -= OnAuthChanged;
+
+    private void GoProfile() => Navigation.NavigateTo("/profile");
+    private void GoHelp() => Navigation.NavigateTo("/help");
 
     private async Task LogoutAsync()
     {

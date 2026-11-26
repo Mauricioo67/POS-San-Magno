@@ -14,16 +14,6 @@ namespace POS.Server.Controllers
         {
             _authService = authService;
         }
-        [HttpPost("register")]
-        public async Task<ActionResult<AuthResponse>> Register(RegisterRequest request)
-        {
-            var response = await _authService.RegisterAsync(request);
-            if (response == null)
-            {
-                return BadRequest("Usuario ya existe");
-            }
-            return Ok(response);
-        }
         [HttpPost("Login")]
         [EnableRateLimiting("login")]
         public async Task<ActionResult<AuthResponse>> Login(LoginRequest request)

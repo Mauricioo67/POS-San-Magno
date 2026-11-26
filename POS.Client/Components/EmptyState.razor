@@ -1,0 +1,21 @@
+<div class="pos-empty">
+    <div class="pos-empty-icon">
+        <MudIcon Icon="@Icon" Size="Size.Large" />
+    </div>
+    <MudText Typo="Typo.h6" Class="pos-section-title">@Title</MudText>
+    @if (!string.IsNullOrWhiteSpace(Text))
+    {
+        <MudText Typo="Typo.body2" Class="pos-section-sub">@Text</MudText>
+    }
+    @if (ChildContent != null)
+    {
+        <div class="mt-3">@ChildContent</div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Sin información";
+    [Parameter] public string Text { get; set; } = string.Empty;
+    [Parameter] public string Icon { get; set; } = Icons.Material.Filled.Inbox;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

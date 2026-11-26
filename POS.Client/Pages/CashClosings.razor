@@ -1,0 +1,200 @@
+@page "/cashclosings"
+@inject CashClosingApiService CashClosingApi
+@inject AuthStateService AuthState
+@inject IJSRuntime JS
+
+<PageTitle>Historial de cierres - App POS</PageTitle>
+
+<PageHeader Title="Historial de cierres"
+            Eyebrow="Administración"
+            Description="Consulta los cierres de caja registrados, sus totales por método de pago y observaciones."
+            Icon="@Icons.Material.Filled.History">
+    <Actions>
+        <MudButton Variant="Variant.Filled" Color="Color.Inherit" Class="pos-btn-light"
+                   StartIcon="@Icons.Material.Filled.Download" Disabled="Filtered.Count == 0"
+                   OnClick="ExportCsvAsync">Exportar CSV</MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Inherit" Class="pos-btn-ghost"
+                   StartIcon="@Icons.Material.Filled.Add" Href="/opencashclosing">Nuevo cierre</MudButton>
+    </Actions>
+</PageHeader>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate Color="Color.Primary" />
+}
+else if (!AuthState.IsAuthenticated)
+{
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">Debe iniciar sesión para ver esta sección.</MudAlert>
+}
+else if (!AuthState.IsAdmin)
+{
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">Solo los administradores pueden ver los cierres de caja.</MudAlert>
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_error</MudAlert>
+}
+else
+{
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Cierres" Value="@Filtered.Count.ToString()" Hint="En el período"
+                      Icon="@Icons.Material.Filled.History" Accent="linear-gradient(135deg,#4f46e5,#7c3aed)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Saldo acumulado" Value="@Filtered.Sum(c => c.FinalBalance).ToString("C")"
+                      Hint="Total de cierres filtrados" Icon="@Icons.Material.Filled.AccountBalanceWallet"
+                      Accent="linear-gradient(135deg,#06b6d4,#0ea5e9)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Promedio por cierre" Value="@Average.ToString("C")" Hint="Saldo final promedio"
+                      Icon="@Icons.Material.Filled.TrendingUp" Accent="linear-gradient(135deg,#ec4899,#f59e0b)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Ajustes" Value="@Filtered.Sum(c => c.TotalAdjustments).ToString("C")"
+                      Hint="Acumulados en el período" Icon="@Icons.Material.Filled.Tune"
+                      Accent="linear-gradient(135deg,#10b981,#84cc16)" />
+        </MudItem>
+    </MudGrid>
+
+    <MudPaper Class="pos-card pos-card-pad mb-4" Elevation="0">
+        <MudGrid Spacing="2">
+            <MudItem xs="12" sm="6" md="4">
+                <MudDatePicker @bind-Date="_from" Label="Desde" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <MudDatePicker @bind-Date="_to" Label="Hasta" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth
+                           StartIcon="@Icons.Material.Filled.FilterAlt" OnClick="Apply">Aplicar filtro</MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <MudPaper Class="pos-card pos-table-card" Elevation="0">
+        @if (Filtered.Count == 0)
+        {
+            <EmptyState Title="Sin cierres"
+                        Text="No hay cierres de caja en el período seleccionado."
+                        Icon="@Icons.Material.Filled.Summarize" />
+        }
+        else
+        {
+            <MudTable Items="@Filtered" Hover Dense Striped Breakpoint="Breakpoint.Md">
+                <HeaderContent>
+                    <MudTh>#</MudTh>
+                    <MudTh>Inicio</MudTh>
+                    <MudTh>Fin</MudTh>
+                    <MudTh Style="text-align: right">Saldo inicial</MudTh>
+                    <MudTh Style="text-align: right">Efectivo</MudTh>
+                    <MudTh Style="text-align: right">Tarjeta</MudTh>
+                    <MudTh Style="text-align: right">Transferencia</MudTh>
+                    <MudTh Style="text-align: right">Ajustes</MudTh>
+                    <MudTh Style="text-align: right">Saldo final</MudTh>
+                    <MudTh>Usuario</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd><span class="pos-cell-primary">@context.Id</span></MudTd>
+                    <MudTd>@context.StartDate.ToString("dd/MM/yy HH:mm")</MudTd>
+                    <MudTd>@context.EndDate.ToString("dd/MM/yy HH:mm")</MudTd>
+                    <MudTd Style="text-align: right">@context.InitialBalance.ToString("C")</MudTd>
+                    <MudTd Style="text-align: right">@context.TotalCash.ToString("C")</MudTd>
+                    <MudTd Style="text-align: right">@context.TotalCard.ToString("C")</MudTd>
+                    <MudTd Style="text-align: right">@context.TotalTransfer.ToString("C")</MudTd>
+                    <MudTd Style="text-align: right">@context.TotalAdjustments.ToString("C")</MudTd>
+                    <MudTd Style="text-align: right" Class="pos-money">@context.FinalBalance.ToString("C")</MudTd>
+                    <MudTd Class="pos-cell-muted">@context.User?.Name</MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudPaper>
+}
+
+@code {
+    private bool _loading = true;
+    private string? _error;
+    private List<POS.Shared.Entities.CashClosing> _closings = new();
+    private DateTime? _from = DateTime.Today.AddDays(-90);
+    private DateTime? _to = DateTime.Today;
+
+    private List<POS.Shared.Entities.CashClosing> Filtered
+    {
+        get
+        {
+            var from = (_from ?? DateTime.MinValue).Date;
+            var to = (_to ?? DateTime.MaxValue).Date;
+            return _closings.Where(c => c.EndDate.Date >= from && c.EndDate.Date <= to)
+                            .OrderByDescending(c => c.EndDate)
+                            .ToList();
+        }
+    }
+
+    private decimal Average => Filtered.Count == 0 ? 0 : Filtered.Average(c => c.FinalBalance);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthState.InitializeAsync();
+        if (!AuthState.IsAuthenticated || !AuthState.IsAdmin)
+        {
+            _loading = false;
+            return;
+        }
+        try
+        {
+            _closings = await CashClosingApi.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"No se pudieron cargar los cierres de caja: {ex.Message}";
+        }
+        _loading = false;
+    }
+
+    private void Apply()
+    {
+        if (_from.HasValue && _to.HasValue && _from.Value.Date > _to.Value.Date)
+        {
+            (_from, _to) = (_to, _from);
+        }
+        StateHasChanged();
+    }
+
+    private async Task ExportCsvAsync()
+    {
+        var closings = Filtered;
+        if (closings.Count == 0)
+        {
+            return;
+        }
+
+        var csv = new System.Text.StringBuilder();
+        csv.AppendLine("Cierre;Inicio;Fin;SaldoInicial;Efectivo;Tarjeta;Transferencia;Ajustes;SaldoFinal;Usuario;Notas");
+        foreach (var closing in closings)
+        {
+            csv.AppendLine(string.Join(";",
+                closing.Id,
+                Escape(closing.StartDate.ToString("dd/MM/yyyy HH:mm")),
+                Escape(closing.EndDate.ToString("dd/MM/yyyy HH:mm")),
+                closing.InitialBalance.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture),
+                closing.TotalCash.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture),
+                closing.TotalCard.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture),
+                closing.TotalTransfer.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture),
+                closing.TotalAdjustments.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture),
+                closing.FinalBalance.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture),
+                Escape(closing.User?.Name ?? string.Empty),
+                Escape(closing.Notes ?? string.Empty)));
+        }
+
+        var fileName = $"cierres_caja_{(_from ?? DateTime.Today):yyyyMMdd}_{(_to ?? DateTime.Today):yyyyMMdd}.csv";
+        var content = ((char)0xFEFF).ToString() + csv;
+        await JS.InvokeVoidAsync("posDownload", fileName, content, "text/csv;charset=utf-8");
+    }
+
+    private static string Escape(string value)
+    {
+        const char quote = (char)34;
+        var doubled = new string(quote, 2);
+        return quote + value.Replace(quote.ToString(), doubled) + quote;
+    }
+}

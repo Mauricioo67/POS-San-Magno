@@ -1,8 +1,20 @@
-<MudText>@Message</MudText>
+<div class="d-flex align-center gap-3 mb-3">
+    <div class="pos-dialog-icon" style="background: linear-gradient(135deg,#f59e0b,#ef4444);">
+        <MudIcon Icon="@Icons.Material.Filled.WarningAmber" />
+    </div>
+    <div>
+        <MudText Typo="Typo.overline" Class="pos-kicker">Confirmación</MudText>
+        <MudText Typo="Typo.h6" Class="pos-dialog-title">¿Continuar?</MudText>
+    </div>
+</div>
+
+<MudText Typo="Typo.body1" Class="mb-4">@Message</MudText>
 
 <div class="d-flex justify-end gap-2 mt-4">
-    <MudButton OnClick="Cancel">Cancelar</MudButton>
-    <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="Confirm">Confirmar</MudButton>
+    <MudButton OnClick="Cancel" Variant="Variant.Text">Cancelar</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.Check" OnClick="Confirm">
+        Confirmar
+    </MudButton>
 </div>
 
 @code {

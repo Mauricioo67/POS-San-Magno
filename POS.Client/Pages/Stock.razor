@@ -3,26 +3,58 @@
 @inject ProductApiService ProductApi
 @inject AuthStateService AuthState
 @inject ISnackbar Snackbar
+@inject StockAlertService StockAlerts
 
 <PageTitle>Stock - App POS</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-4">Movimientos de stock</MudText>
+<PageHeader Title="Movimientos de stock"
+            Eyebrow="Inventario"
+            Description="Registra entradas, salidas y ajustes de existencias con trazabilidad por usuario."
+            Icon="@Icons.Material.Filled.Inventory" />
 
 @if (!AuthState.IsAuthenticated)
 {
-    <MudAlert Severity="Severity.Warning">Debe iniciar sesión para ver esta sección.</MudAlert>
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">Debe iniciar sesión para ver esta sección.</MudAlert>
 }
 else if (_error != null)
 {
-    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_error</MudAlert>
 }
 else
 {
-    <MudPaper Class="pa-4 mb-4" Elevation="2">
-        <MudText Typo="Typo.h6" Class="mb-2">Registrar movimiento</MudText>
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Movimientos" Value="@_movements.Count.ToString()" Hint="Historial registrado"
+                      Icon="@Icons.Material.Filled.SwapVert" Accent="linear-gradient(135deg,#4f46e5,#7c3aed)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Entradas" Value="@_movements.Count(m => m.MovementType == MovementType.Entrada).ToString()"
+                      Hint="Ingresos de mercancía" Icon="@Icons.Material.Filled.CallReceived"
+                      Accent="linear-gradient(135deg,#10b981,#06b6d4)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Salidas" Value="@_movements.Count(m => m.MovementType == MovementType.Salida).ToString()"
+                      Hint="Retiros de mercancía" Icon="@Icons.Material.Filled.CallMade"
+                      Accent="linear-gradient(135deg,#ef4444,#f59e0b)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Ajustes" Value="@_movements.Count(m => m.MovementType == MovementType.Ajuste).ToString()"
+                      Hint="Correcciones de inventario" Icon="@Icons.Material.Filled.Tune"
+                      Accent="linear-gradient(135deg,#ec4899,#7c3aed)" />
+        </MudItem>
+    </MudGrid>
+
+    <MudPaper Class="pos-card pos-card-pad mb-4" Elevation="0">
+        <div class="pos-section-head">
+            <div>
+                <MudText Typo="Typo.overline" Class="pos-kicker">Nuevo registro</MudText>
+                <MudText Typo="Typo.h6" Class="pos-section-title">Registrar movimiento</MudText>
+            </div>
+            <MudChip T="string" Size="Size.Small" Color="Color.Primary">@_movementType</MudChip>
+        </div>
         <MudGrid Spacing="2">
-            <MudItem xs="12" md="3">
-                <MudSelect @bind-Value="_productId" Label="Producto">
+            <MudItem xs="12" md="4">
+                <MudSelect @bind-Value="_productId" Label="Producto" Variant="Variant.Outlined" Required="true">
                     @foreach (var product in _products)
                     {
                         <MudSelectItem Value="@product.Id">@product.Name</MudSelectItem>
@@ -30,54 +62,86 @@ else
                 </MudSelect>
             </MudItem>
             <MudItem xs="12" md="2">
-                <MudSelect @bind-Value="_movementType" Label="Tipo">
-                    <MudSelectItem Value="@Shared.Enums.MovementType.Entrada">Entrada</MudSelectItem>
-                    <MudSelectItem Value="@Shared.Enums.MovementType.Salida">Salida</MudSelectItem>
+                <MudSelect @bind-Value="_movementType" Label="Tipo" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@MovementType.Entrada">Entrada</MudSelectItem>
+                    <MudSelectItem Value="@MovementType.Salida">Salida</MudSelectItem>
                     @if (AuthState.IsAdmin)
                     {
-                        <MudSelectItem Value="@Shared.Enums.MovementType.Ajuste">Ajuste</MudSelectItem>
+                        <MudSelectItem Value="@MovementType.Ajuste">Ajuste</MudSelectItem>
                     }
                 </MudSelect>
             </MudItem>
             <MudItem xs="12" md="2">
-                <MudNumericField @bind-Value="_quantity" Label="Cantidad" Min="1" />
+                <MudNumericField @bind-Value="_quantity" Label="Cantidad" Min="1" Variant="Variant.Outlined" />
             </MudItem>
-            <MudItem xs="12" md="3">
-                <MudTextField @bind-Value="_notes" Label="Notas" MaxLines="1" />
+            <MudItem xs="12" md="2">
+                <MudTextField @bind-Value="_notes" Label="Notas" MaxLines="1" Variant="Variant.Outlined" />
             </MudItem>
             <MudItem xs="12" md="2">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth StartIcon="@Icons.Material.Filled.Save"
                            Disabled="@(_productId <= 0 || _saving)" OnClick="RegisterMovementAsync">Registrar</MudButton>
             </MudItem>
         </MudGrid>
-        @if (_movementType == Shared.Enums.MovementType.Ajuste)
+        @if (_movementType == MovementType.Ajuste)
         {
-            <MudText Typo="Typo.caption" Class="mud-warning-text mt-1">
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true" Class="mt-3">
                 El ajuste fija el stock actual del producto en la cantidad indicada (solo administradores).
-            </MudText>
+            </MudAlert>
         }
     </MudPaper>
 
-    <MudTable Items="@FilteredMovements" Hover Striped Dense>
-        <HeaderContent>
-            <MudTh>Fecha</MudTh>
-            <MudTh>Producto</MudTh>
-            <MudTh>Tipo</MudTh>
-            <MudTh Style="text-align: right">Cantidad</MudTh>
-            <MudTh>Usuario</MudTh>
-            <MudTh>Notas</MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd>@context.MovementDate.ToString("dd/MM/yyyy HH:mm")</MudTd>
-            <MudTd>@context.Product?.Name</MudTd>
-            <MudTd>
-                <MudChip T="string" Color="@ChipColorFor(context.MovementType)" Size="Size.Small">@context.MovementType</MudChip>
-            </MudTd>
-            <MudTd Style="text-align: right">@context.Quantity</MudTd>
-            <MudTd>@context.User?.Name</MudTd>
-            <MudTd>@context.Notes</MudTd>
-        </RowTemplate>
-    </MudTable>
+    <div class="pos-toolbar">
+        <div class="pos-toolbar-filters">
+            <MudTextField @bind-Value="_search" Placeholder="Buscar producto o nota" Variant="Variant.Outlined"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true" Class="pos-search" Margin="Margin.Dense" />
+            <MudSelect @bind-Value="_filterProductId" Label="Filtrar por producto" Variant="Variant.Outlined"
+                       Margin="Margin.Dense" Style="min-width: 230px;">
+                <MudSelectItem Value="0">Todos los productos</MudSelectItem>
+                @foreach (var product in _products)
+                {
+                    <MudSelectItem Value="@product.Id">@product.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </div>
+        <span class="pos-pill">@FilteredMovements.Count() movimiento(s)</span>
+    </div>
+
+    <MudPaper Class="pos-card pos-table-card" Elevation="0">
+        @if (!FilteredMovements.Any())
+        {
+            <EmptyState Title="Sin movimientos"
+                        Text="Registra una entrada o salida para ver el historial."
+                        Icon="@Icons.Material.Filled.SwapVert" />
+        }
+        else
+        {
+            <MudTable Items="@FilteredMovements" Hover Dense Breakpoint="Breakpoint.Sm">
+                <HeaderContent>
+                    <MudTh>Fecha</MudTh>
+                    <MudTh>Producto</MudTh>
+                    <MudTh>Tipo</MudTh>
+                    <MudTh Style="text-align: right">Cantidad</MudTh>
+                    <MudTh>Usuario</MudTh>
+                    <MudTh>Notas</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.MovementDate.ToString("dd/MM/yyyy HH:mm")</MudTd>
+                    <MudTd><span class="pos-cell-primary">@context.Product?.Name</span></MudTd>
+                    <MudTd>
+                        <MudChip T="string" Color="@ChipColorFor(context.MovementType)" Size="Size.Small">
+                            @context.MovementType
+                        </MudChip>
+                    </MudTd>
+                    <MudTd Style="text-align: right">
+                        <strong>@(context.MovementType == MovementType.Entrada ? "+" : context.MovementType == MovementType.Salida ? "-" : "=")@context.Quantity</strong>
+                    </MudTd>
+                    <MudTd Class="pos-cell-muted">@context.User?.Name</MudTd>
+                    <MudTd Class="pos-cell-muted">@context.Notes</MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudPaper>
 }
 
 @code {
@@ -86,8 +150,10 @@ else
 
     private bool _saving = false;
     private string? _error;
+    private string _search = string.Empty;
     private int _productId;
-    private Shared.Enums.MovementType _movementType = Shared.Enums.MovementType.Entrada;
+    private int _filterProductId;
+    private MovementType _movementType = MovementType.Entrada;
     private int _quantity = 1;
     private string _notes = string.Empty;
     private List<POS.Shared.Entities.Product> _products = new();
@@ -106,6 +172,7 @@ else
             if (ProductIdQuery.HasValue && _products.Any(p => p.Id == ProductIdQuery.Value))
             {
                 _productId = ProductIdQuery.Value;
+                _filterProductId = ProductIdQuery.Value;
             }
             await LoadMovementsAsync();
         }
@@ -116,12 +183,17 @@ else
     }
 
     private IEnumerable<POS.Shared.Entities.Stock> FilteredMovements =>
-        _productId <= 0 ? _movements : _movements.Where(m => m.ProductId == _productId);
+        _movements
+            .Where(m => _filterProductId <= 0 || m.ProductId == _filterProductId)
+            .Where(m => string.IsNullOrWhiteSpace(_search)
+                        || (m.Product?.Name.Contains(_search, StringComparison.OrdinalIgnoreCase) ?? false)
+                        || (m.Notes?.Contains(_search, StringComparison.OrdinalIgnoreCase) ?? false))
+            .OrderByDescending(m => m.MovementDate);
 
-    private static Color ChipColorFor(Shared.Enums.MovementType type) => type switch
+    private static Color ChipColorFor(MovementType type) => type switch
     {
-        Shared.Enums.MovementType.Entrada => Color.Success,
-        Shared.Enums.MovementType.Salida => Color.Error,
+        MovementType.Entrada => Color.Success,
+        MovementType.Salida => Color.Error,
         _ => Color.Warning
     };
 
@@ -149,6 +221,7 @@ else
                 Snackbar.Add("Movimiento registrado", Severity.Success);
                 _notes = string.Empty;
                 _products = await ProductApi.GetAllAsync();
+                await StockAlerts.RefreshAsync();
                 await LoadMovementsAsync();
             }
             else

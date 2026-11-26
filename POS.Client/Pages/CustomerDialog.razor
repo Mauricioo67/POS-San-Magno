@@ -1,0 +1,65 @@
+<div class="d-flex align-center gap-3 mb-4">
+    <div class="pos-dialog-icon">
+        <MudIcon Icon="@(IsNew ? Icons.Material.Filled.PersonAdd : Icons.Material.Filled.Person)" />
+    </div>
+    <div>
+        <MudText Typo="Typo.overline" Class="pos-kicker">Clientes</MudText>
+        <MudText Typo="Typo.h6" Class="pos-dialog-title">@(IsNew ? "Nuevo cliente" : "Editar cliente")</MudText>
+    </div>
+</div>
+
+<MudForm Model="@Customer">
+    <MudGrid Spacing="2">
+        <MudItem xs="12">
+            <MudTextField @bind-Value="Customer.Name" Label="Nombre o razón social" Required Immediate
+                          Variant="Variant.Outlined" Class="mb-2" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="Customer.DocumentNumber" Label="Documento / RUC" Required Immediate
+                          Variant="Variant.Outlined" Class="mb-2" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="Customer.Phone" Label="Teléfono" Variant="Variant.Outlined" Class="mb-2" />
+        </MudItem>
+        <MudItem xs="12">
+            <MudTextField @bind-Value="Customer.Email" Label="Email" InputType="InputType.Email"
+                          Variant="Variant.Outlined" Class="mb-2" />
+        </MudItem>
+        <MudItem xs="12">
+            <MudTextField @bind-Value="Customer.Address" Label="Dirección" Lines="2"
+                          Variant="Variant.Outlined" Class="mb-2" />
+        </MudItem>
+        <MudItem xs="12">
+            <MudSwitch @bind-Value="Customer.IsActive" Label="Cliente activo" Color="Color.Primary" Class="mb-2" />
+        </MudItem>
+    </MudGrid>
+</MudForm>
+
+<div class="d-flex justify-end gap-2 mt-4">
+    <MudButton OnClick="Cancel" Variant="Variant.Text">Cancelar</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="Submit">
+        Guardar
+    </MudButton>
+</div>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public Customer Customer { get; set; } = new();
+
+    [Parameter]
+    public bool IsNew { get; set; }
+
+    private void Submit()
+    {
+        if (string.IsNullOrWhiteSpace(Customer.Name) || string.IsNullOrWhiteSpace(Customer.DocumentNumber))
+        {
+            return;
+        }
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

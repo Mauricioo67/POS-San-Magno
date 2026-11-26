@@ -6,68 +6,115 @@
 
 <PageTitle>Usuarios - App POS</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-4">Usuarios</MudText>
+<PageHeader Title="Usuarios"
+            Eyebrow="Seguridad"
+            Description="Administra cuentas, roles y estado de acceso del personal."
+            Icon="@Icons.Material.Filled.VerifiedUser">
+    <Actions>
+        <MudButton Variant="Variant.Filled" Color="Color.Inherit" Class="pos-btn-light"
+                   StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="CreateAsync">Nuevo usuario</MudButton>
+    </Actions>
+</PageHeader>
 
 @if (_loading)
 {
-    <MudProgressLinear Indeterminate />
+    <MudProgressLinear Indeterminate Color="Color.Primary" />
 }
 else if (!AuthState.IsAuthenticated)
 {
-    <MudAlert Severity="Severity.Warning">Debe iniciar sesión para ver esta sección.</MudAlert>
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">Debe iniciar sesión para ver esta sección.</MudAlert>
 }
 else if (!AuthState.IsAdmin)
 {
-    <MudAlert Severity="Severity.Warning">Solo los administradores pueden ver los usuarios.</MudAlert>
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">Solo los administradores pueden ver los usuarios.</MudAlert>
 }
 else if (_error != null)
 {
-    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_error</MudAlert>
 }
 else
 {
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd"
-               OnClick="CreateAsync" Class="mb-3">Nuevo usuario</MudButton>
-    <MudPaper Class="pa-4" Elevation="2">
-        <MudTable Items="@_users" Hover Dense Striped>
-            <HeaderContent>
-                <MudTh>Id</MudTh>
-                <MudTh>Nombre</MudTh>
-                <MudTh>Email</MudTh>
-                <MudTh>Rol</MudTh>
-                <MudTh>Estado</MudTh>
-                <MudTh>Acciones</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd>@context.Id</MudTd>
-                <MudTd>@context.Name</MudTd>
-                <MudTd>@context.Email</MudTd>
-                <MudTd>
-                    <MudChip T="string" Size="Size.Small"
-                             Color="@(context.Role == "Administrador" ? Color.Primary : Color.Default)">
-                        @context.Role
-                    </MudChip>
-                </MudTd>
-                <MudTd>
-                    <MudChip T="string" Size="Size.Small"
-                             Color="@(context.IsActive ? Color.Success : Color.Error)">
-                        @(context.IsActive ? "Activo" : "Inactivo")
-                    </MudChip>
-                </MudTd>
-                <MudTd>
-                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
-                                   aria-label="Editar usuario" OnClick="() => EditAsync(context)" />
-                    @if (context.IsActive)
-                    {
-                        <MudIconButton Icon="@Icons.Material.Filled.PersonOff" Color="Color.Error" Size="Size.Small"
-                                       aria-label="Desactivar usuario" OnClick="() => DeactivateAsync(context)" />
-                    }
-                </MudTd>
-            </RowTemplate>
-        </MudTable>
-        <MudText Typo="Typo.caption" Class="mud-text-secondary mt-2">
-            Las cuentas desactivadas se conservan para proteger el historial de operaciones.
-        </MudText>
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Cuentas" Value="@_users.Count.ToString()" Hint="Usuarios registrados"
+                      Icon="@Icons.Material.Filled.Group" Accent="linear-gradient(135deg,#4f46e5,#7c3aed)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Activas" Value="@_users.Count(u => u.IsActive).ToString()" Hint="Con acceso al sistema"
+                      Icon="@Icons.Material.Filled.CheckCircle" Accent="linear-gradient(135deg,#10b981,#06b6d4)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Administradores" Value="@_users.Count(u => u.Role == "Administrador").ToString()"
+                      Hint="Control total" Icon="@Icons.Material.Filled.AdminPanelSettings"
+                      Accent="linear-gradient(135deg,#ec4899,#f59e0b)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Cajeros" Value="@_users.Count(u => u.Role == "Cajero").ToString()"
+                      Hint="Operación de caja" Icon="@Icons.Material.Filled.PointOfSale"
+                      Accent="linear-gradient(135deg,#06b6d4,#0ea5e9)" />
+        </MudItem>
+    </MudGrid>
+
+    <MudPaper Class="pos-card pos-table-card" Elevation="0">
+        @if (_users.Count == 0)
+        {
+            <EmptyState Title="Sin usuarios"
+                        Text="Crea la primera cuenta para habilitar el acceso al sistema."
+                        Icon="@Icons.Material.Filled.PersonAdd" />
+        }
+        else
+        {
+            <MudTable Items="@_users" Hover Dense Striped Breakpoint="Breakpoint.Sm">
+                <HeaderContent>
+                    <MudTh>Id</MudTh>
+                    <MudTh>Usuario</MudTh>
+                    <MudTh>Email</MudTh>
+                    <MudTh>Rol</MudTh>
+                    <MudTh>Estado</MudTh>
+                    <MudTh Style="text-align: right">Acciones</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd><span class="pos-cell-muted">#@context.Id</span></MudTd>
+                    <MudTd>
+                        <div class="d-flex align-center gap-2">
+                            <div class="pos-shortcut-icon" style="width:36px;height:36px;border-radius:11px;background:linear-gradient(135deg,#4f46e5,#7c3aed);">
+                                <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
+                            </div>
+                            <span class="pos-cell-primary">@context.Name</span>
+                        </div>
+                    </MudTd>
+                    <MudTd Class="pos-cell-muted">@context.Email</MudTd>
+                    <MudTd>
+                        <MudChip T="string" Size="Size.Small"
+                                 Color="@(context.Role == "Administrador" ? Color.Primary : Color.Default)">
+                            @context.Role
+                        </MudChip>
+                    </MudTd>
+                    <MudTd>
+                        <MudChip T="string" Size="Size.Small"
+                                 Color="@(context.IsActive ? Color.Success : Color.Error)">
+                            @(context.IsActive ? "Activo" : "Inactivo")
+                        </MudChip>
+                    </MudTd>
+                    <MudTd Style="text-align: right">
+                        <div class="d-flex justify-end">
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
+                                           aria-label="Editar usuario" OnClick="() => EditAsync(context)" />
+                            @if (context.IsActive)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.PersonOff" Color="Color.Error" Size="Size.Small"
+                                               aria-label="Desactivar usuario" OnClick="() => DeactivateAsync(context)" />
+                            }
+                        </div>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+        <div class="px-4 pb-3">
+            <MudText Typo="Typo.caption" Class="pos-cell-muted">
+                Las cuentas desactivadas se conservan para proteger el historial de operaciones.
+            </MudText>
+        </div>
     </MudPaper>
 }
 
@@ -171,7 +218,8 @@ else
             ["User"] = request,
             ["IsNew"] = isNew
         };
-        var dialog = await DialogService.ShowAsync<UserDialog>(isNew ? "Nuevo usuario" : "Editar usuario", parameters);
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        var dialog = await DialogService.ShowAsync<UserDialog>(isNew ? "Nuevo usuario" : "Editar usuario", parameters, options);
         return (await dialog.Result) is { Canceled: false, Data: not null };
     }
 }

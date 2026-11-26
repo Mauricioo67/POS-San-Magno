@@ -1,0 +1,243 @@
+@page "/customers"
+@inject CustomerApiService CustomerApi
+@inject AuthStateService AuthState
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Clientes - App POS</PageTitle>
+
+<PageHeader Title="Clientes"
+            Eyebrow="Relaciones comerciales"
+            Description="Registra y consulta los datos de tus clientes para ventas y despachos."
+            Icon="@Icons.Material.Filled.People">
+    <Actions>
+        <MudButton Variant="Variant.Filled" Color="Color.Inherit" Class="pos-btn-light"
+                   StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="OpenCreateDialog">Nuevo cliente</MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Inherit" Class="pos-btn-ghost"
+                   StartIcon="@Icons.Material.Filled.LocalShipping" Href="/dispatches">Despachos</MudButton>
+    </Actions>
+</PageHeader>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate Color="Color.Primary" />
+}
+else if (!AuthState.IsAuthenticated)
+{
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">Debe iniciar sesión para ver esta sección.</MudAlert>
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_error</MudAlert>
+}
+else
+{
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="12" sm="6" md="4">
+            <StatCard Label="Clientes" Value="@_customers.Count.ToString()" Hint="Total registrados"
+                      Icon="@Icons.Material.Filled.People" Accent="linear-gradient(135deg,#4f46e5,#7c3aed)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <StatCard Label="Activos" Value="@_customers.Count(c => c.IsActive).ToString()" Hint="Disponibles para operar"
+                      Icon="@Icons.Material.Filled.CheckCircle" Accent="linear-gradient(135deg,#10b981,#06b6d4)" />
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <StatCard Label="Inactivos" Value="@_customers.Count(c => !c.IsActive).ToString()" Hint="Conservados por historial"
+                      Icon="@Icons.Material.Filled.PersonOff" Accent="linear-gradient(135deg,#f59e0b,#ef4444)" />
+        </MudItem>
+    </MudGrid>
+
+    <div class="pos-toolbar">
+        <div class="pos-toolbar-filters">
+            <MudTextField @bind-Value="_search" Placeholder="Buscar por nombre, documento o email"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true" Class="pos-search" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </div>
+        <span class="pos-pill">@FilteredCustomers.Count() cliente(s)</span>
+    </div>
+
+    <MudPaper Class="pos-card pos-table-card" Elevation="0">
+        @if (!FilteredCustomers.Any())
+        {
+            <EmptyState Title="Sin clientes"
+                        Text="Registra el primer cliente para asociarlo a ventas y despachos."
+                        Icon="@Icons.Material.Filled.People">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd"
+                           OnClick="OpenCreateDialog">Nuevo cliente</MudButton>
+            </EmptyState>
+        }
+        else
+        {
+            <MudTable Items="@FilteredCustomers" Hover Dense Breakpoint="Breakpoint.Md">
+                <HeaderContent>
+                    <MudTh>Documento</MudTh>
+                    <MudTh>Cliente</MudTh>
+                    <MudTh>Contacto</MudTh>
+                    <MudTh>Dirección</MudTh>
+                    <MudTh>Estado</MudTh>
+                    <MudTh Style="text-align: right">Acciones</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd><span class="pos-mono pos-cell-muted">@context.DocumentNumber</span></MudTd>
+                    <MudTd>
+                        <div class="d-flex align-center gap-2">
+                            <div class="pos-shortcut-icon" style="width:36px;height:36px;border-radius:11px;background:linear-gradient(135deg,#7c3aed,#ec4899);">
+                                <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
+                            </div>
+                            <span class="pos-cell-primary">@context.Name</span>
+                        </div>
+                    </MudTd>
+                    <MudTd>
+                        <div class="pos-cell-muted">@context.Email</div>
+                        <div class="pos-cell-muted">@context.Phone</div>
+                    </MudTd>
+                    <MudTd Class="pos-cell-muted">@context.Address</MudTd>
+                    <MudTd>
+                        <MudChip T="string" Size="Size.Small"
+                                 Color="@(context.IsActive ? Color.Success : Color.Error)">
+                            @(context.IsActive ? "Activo" : "Inactivo")
+                        </MudChip>
+                    </MudTd>
+                    <MudTd Style="text-align: right">
+                        <div class="d-flex justify-end">
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
+                                           aria-label="Editar cliente" OnClick="() => OpenEditDialog(context)" />
+                            @if (AuthState.IsAdmin && context.IsActive)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.PersonOff" Color="Color.Error" Size="Size.Small"
+                                               aria-label="Desactivar cliente" OnClick="() => DeactivateAsync(context)" />
+                            }
+                        </div>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+        <div class="px-4 pb-3">
+            <MudText Typo="Typo.caption" Class="pos-cell-muted">
+                Los clientes desactivados se conservan para proteger el historial de despachos.
+            </MudText>
+        </div>
+    </MudPaper>
+}
+
+@code {
+    private bool _loading = true;
+    private string? _error;
+    private string _search = string.Empty;
+    private List<Customer> _customers = new();
+
+    private IEnumerable<Customer> FilteredCustomers =>
+        (_customers.Where(c => string.IsNullOrWhiteSpace(_search)
+                               || c.Name.Contains(_search, StringComparison.OrdinalIgnoreCase)
+                               || c.DocumentNumber.Contains(_search, StringComparison.OrdinalIgnoreCase)
+                               || c.Email.Contains(_search, StringComparison.OrdinalIgnoreCase)))
+            .OrderBy(c => c.Name);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthState.InitializeAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        if (!AuthState.IsAuthenticated)
+        {
+            _loading = false;
+            return;
+        }
+        try
+        {
+            _customers = await CustomerApi.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"No se pudieron cargar los clientes: {ex.Message}";
+        }
+        _loading = false;
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var customer = new Customer { IsActive = true };
+        if (!await ShowDialogAsync(customer, "Nuevo cliente"))
+        {
+            return;
+        }
+
+        var (success, error) = await CustomerApi.CreateAsync(customer);
+        if (success)
+        {
+            Snackbar.Add("Cliente creado", Severity.Success);
+            await LoadAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Error al crear el cliente", Severity.Error);
+        }
+    }
+
+    private async Task OpenEditDialog(Customer existing)
+    {
+        var customer = new Customer
+        {
+            Id = existing.Id,
+            Name = existing.Name,
+            DocumentNumber = existing.DocumentNumber,
+            Email = existing.Email,
+            Phone = existing.Phone,
+            Address = existing.Address,
+            IsActive = existing.IsActive,
+            CreatedAt = existing.CreatedAt
+        };
+        if (!await ShowDialogAsync(customer, "Editar cliente"))
+        {
+            return;
+        }
+
+        var (success, error) = await CustomerApi.UpdateAsync(customer);
+        if (success)
+        {
+            Snackbar.Add("Cliente actualizado", Severity.Success);
+            await LoadAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Error al actualizar el cliente", Severity.Error);
+        }
+    }
+
+    private async Task<bool> ShowDialogAsync(Customer customer, string title)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Customer"] = customer,
+            ["IsNew"] = customer.Id == 0
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        var dialog = await DialogService.ShowAsync<CustomerDialog>(title, parameters, options);
+        return (await dialog.Result) is { Canceled: false, Data: not null };
+    }
+
+    private async Task DeactivateAsync(Customer customer)
+    {
+        var parameters = new DialogParameters { ["Message"] = $"¿Desactivar el cliente '{customer.Name}'?" };
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Confirmar", parameters);
+        if ((await dialog.Result) is not { Canceled: false, Data: not null })
+        {
+            return;
+        }
+
+        var (success, error) = await CustomerApi.DeactivateAsync(customer.Id);
+        if (!success)
+        {
+            Snackbar.Add(error ?? "No se pudo desactivar el cliente", Severity.Error);
+            return;
+        }
+
+        Snackbar.Add("Cliente desactivado", Severity.Success);
+        await LoadAsync();
+    }
+}

@@ -11,7 +11,7 @@ Documentación de la base de datos que usa la solución **POS San Magno**.
 | Base de datos | `POSDB` |
 | Cotejamiento | `Modern_Spanish_CI_AS` |
 | ORM | Entity Framework Core 9.0.22 |
-| Migración aplicada | `20261111125614_InitialDB` |
+| Migraciones aplicadas | `20261111125614_InitialDB`, `20261119124714_AddCustomersAndDispatches`, `20261119135153_UniqueUserEmail` |
 | Autenticación | Windows (Integrated Security) |
 
 Cadena de conexión usada por `POS.Server/appsettings.json`:
@@ -25,14 +25,21 @@ Data Source=LAPTOP-VVQV1RGN\MSSQLSERVER01;Initial Catalog=POSDB;Integrated Secur
 | Tabla | Filas |
 |---|---:|
 | `Users` | 2 |
-| `Category` | 1 |
-| `Product` | 0 |
-| `Sales` | 0 |
-| `SaleDetails` | 0 |
-| `Stocks` | 0 |
+| `Category` | 7 |
+| `Product` | 18 |
+| `Sales` | 18 |
+| `SaleDetails` | 43 |
+| `Stocks` | 61 |
 | `CashClosing` | 0 |
+| `Customers` | 0 |
+| `Dispatches` | 0 |
+| `DispatchDetails` | 0 |
+
+Los datos de catálogo y ventas son de demostración: 6 categorías de negocio (Bebidas, Snacks, Lácteos, Abarrotes, Limpieza y Panadería) más la categoría preexistente de prueba, 18 productos con códigos `BEB-001`…`PAN-002` y 18 ventas por un total de **Bs 462,60** repartidas en tres semanas. Los 61 movimientos de `Stocks` corresponden a las entradas iniciales y a las salidas de esas ventas, y `CurrentStock` refleja el saldo real (ningún producto queda en negativo).
 
 Hay 1 administrador activo y 1 cajero activo. Las contraseñas se guardan como hash BCrypt en `Users.PasswordHash` (nunca en texto plano).
+
+Los importes (`Price`, `TotalAmount`, `UnitPrice`, `TotalPrice`, `FinalBalance`, etc.) se almacenan como `decimal` **sin símbolo** y se interpretan como bolivianos (Bs); el formato de moneda lo aplica el cliente.
 
 ## Diagrama de relaciones
 

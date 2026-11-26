@@ -1,0 +1,290 @@
+@page "/dispatches"
+@inject DispatchApiService DispatchApi
+@inject CustomerApiService CustomerApi
+@inject ProductApiService ProductApi
+@inject AuthStateService AuthState
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Despachos - App POS</PageTitle>
+
+<PageHeader Title="Despachos"
+            Eyebrow="Logística"
+            Description="Gestiona salidas de mercancía, seguimiento de estados y devolución de stock al cancelar."
+            Icon="@Icons.Material.Filled.LocalShipping">
+    <Actions>
+        <MudButton Variant="Variant.Filled" Color="Color.Inherit" Class="pos-btn-light"
+                   StartIcon="@Icons.Material.Filled.Add" OnClick="CreateAsync">Nuevo despacho</MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Inherit" Class="pos-btn-ghost"
+                   StartIcon="@Icons.Material.Filled.People" Href="/customers">Clientes</MudButton>
+    </Actions>
+</PageHeader>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate Color="Color.Primary" />
+}
+else if (!AuthState.IsAuthenticated)
+{
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">Debe iniciar sesión para ver esta sección.</MudAlert>
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_error</MudAlert>
+}
+else
+{
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="6" md="3">
+            <StatCard Label="Pendientes" Value="@_dispatches.Count(d => d.Status == DispatchStatus.Pendiente).ToString()"
+                      Hint="Por despachar" Icon="@Icons.Material.Filled.PendingActions"
+                      Accent="linear-gradient(135deg,#f59e0b,#f97316)" />
+        </MudItem>
+        <MudItem xs="6" md="3">
+            <StatCard Label="Enviados" Value="@_dispatches.Count(d => d.Status == DispatchStatus.Enviado).ToString()"
+                      Hint="En camino" Icon="@Icons.Material.Filled.LocalShipping"
+                      Accent="linear-gradient(135deg,#0ea5e9,#06b6d4)" />
+        </MudItem>
+        <MudItem xs="6" md="3">
+            <StatCard Label="Entregados" Value="@_dispatches.Count(d => d.Status == DispatchStatus.Entregado).ToString()"
+                      Hint="Completados" Icon="@Icons.Material.Filled.CheckCircle"
+                      Accent="linear-gradient(135deg,#10b981,#84cc16)" />
+        </MudItem>
+        <MudItem xs="6" md="3">
+            <StatCard Label="Total despachado" Value="@_dispatches.Where(d => d.Status != DispatchStatus.Cancelado).Sum(d => d.TotalAmount).ToString("C")"
+                      Hint="@($"{_dispatches.Count} despacho(s)")" Icon="@Icons.Material.Filled.Payments"
+                      Accent="linear-gradient(135deg,#7c3aed,#ec4899)" />
+        </MudItem>
+    </MudGrid>
+
+    <div class="pos-toolbar">
+        <div class="pos-toolbar-filters">
+            <MudTextField @bind-Value="_search" Placeholder="Buscar por número o cliente" Variant="Variant.Outlined"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true" Class="pos-search" Margin="Margin.Dense" />
+            <MudSelect @bind-Value="_statusFilter" Label="Estado" Variant="Variant.Outlined"
+                       Margin="Margin.Dense" Style="min-width: 180px;">
+                <MudSelectItem Value="@("Todos")">Todos los estados</MudSelectItem>
+                <MudSelectItem Value="@("Pendiente")">Pendiente</MudSelectItem>
+                <MudSelectItem Value="@("Enviado")">Enviado</MudSelectItem>
+                <MudSelectItem Value="@("Entregado")">Entregado</MudSelectItem>
+                <MudSelectItem Value="@("Cancelado")">Cancelado</MudSelectItem>
+            </MudSelect>
+        </div>
+        <span class="pos-pill">@FilteredDispatches.Count() despacho(s)</span>
+    </div>
+
+    <MudPaper Class="pos-card pos-table-card" Elevation="0">
+        @if (!FilteredDispatches.Any())
+        {
+            <EmptyState Title="Sin despachos"
+                        Text="Crea un despacho para descontar stock y hacer seguimiento de la entrega."
+                        Icon="@Icons.Material.Filled.LocalShipping">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="CreateAsync">Nuevo despacho</MudButton>
+            </EmptyState>
+        }
+        else
+        {
+            <MudTable Items="@FilteredDispatches" Hover Dense Breakpoint="Breakpoint.Md">
+                <HeaderContent>
+                    <MudTh>Número</MudTh>
+                    <MudTh>Fecha</MudTh>
+                    <MudTh>Cliente</MudTh>
+                    <MudTh>Registrado por</MudTh>
+                    <MudTh>Estado</MudTh>
+                    <MudTh Style="text-align: right">Items</MudTh>
+                    <MudTh Style="text-align: right">Total</MudTh>
+                    <MudTh Style="text-align: right">Acciones</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd><span class="pos-mono pos-cell-primary">@context.DispatchNumber</span></MudTd>
+                    <MudTd>@context.DispatchDate.ToString("dd/MM/yy HH:mm")</MudTd>
+                    <MudTd>
+                        <div class="pos-cell-primary">@context.Customer?.Name</div>
+                        <div class="pos-cell-muted">@context.Customer?.DocumentNumber</div>
+                    </MudTd>
+                    <MudTd Class="pos-cell-muted">@context.User?.Name</MudTd>
+                    <MudTd>
+                        <MudChip T="string" Size="Size.Small" Color="@StatusColor(context.Status)">@context.Status</MudChip>
+                    </MudTd>
+                    <MudTd Style="text-align: right">@(context.DispatchDetails?.Sum(d => d.Quantity) ?? 0)</MudTd>
+                    <MudTd Style="text-align: right" Class="pos-money">@context.TotalAmount.ToString("C")</MudTd>
+                    <MudTd Style="text-align: right">
+                        <div class="d-flex justify-end">
+                            <MudTooltip Text="Ver detalle">
+                                <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Color="Color.Default"
+                                               aria-label="Ver detalle" OnClick="() => ShowDetailAsync(context)" />
+                            </MudTooltip>
+                            @if (context.Status == DispatchStatus.Pendiente)
+                            {
+                                <MudTooltip Text="Marcar como enviado">
+                                    <MudIconButton Icon="@Icons.Material.Filled.LocalShipping" Size="Size.Small" Color="Color.Info"
+                                                   aria-label="Marcar como enviado"
+                                                   OnClick="() => AdvanceAsync(context, DispatchStatus.Enviado)" />
+                                </MudTooltip>
+                            }
+                            @if (context.Status == DispatchStatus.Pendiente || context.Status == DispatchStatus.Enviado)
+                            {
+                                <MudTooltip Text="Marcar como entregado">
+                                    <MudIconButton Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success"
+                                                   aria-label="Marcar como entregado"
+                                                   OnClick="() => AdvanceAsync(context, DispatchStatus.Entregado)" />
+                                </MudTooltip>
+                                <MudTooltip Text="Cancelar despacho">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Cancel" Size="Size.Small" Color="Color.Error"
+                                                   aria-label="Cancelar despacho" OnClick="() => CancelAsync(context)" />
+                                </MudTooltip>
+                            }
+                        </div>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+        <div class="px-4 pb-3">
+            <MudText Typo="Typo.caption" Class="pos-cell-muted">
+                El stock se descuenta al registrar el despacho y se devuelve automáticamente si se cancela.
+            </MudText>
+        </div>
+    </MudPaper>
+}
+
+@code {
+    private bool _loading = true;
+    private string? _error;
+    private string _search = string.Empty;
+    private string _statusFilter = "Todos";
+    private List<Dispatch> _dispatches = new();
+
+    private IEnumerable<Dispatch> FilteredDispatches =>
+        _dispatches
+            .Where(d => _statusFilter == "Todos" || d.Status.ToString() == _statusFilter)
+            .Where(d => string.IsNullOrWhiteSpace(_search)
+                        || d.DispatchNumber.Contains(_search, StringComparison.OrdinalIgnoreCase)
+                        || (d.Customer?.Name.Contains(_search, StringComparison.OrdinalIgnoreCase) ?? false))
+            .OrderByDescending(d => d.DispatchDate);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthState.InitializeAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        if (!AuthState.IsAuthenticated)
+        {
+            _loading = false;
+            return;
+        }
+        try
+        {
+            _dispatches = await DispatchApi.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"No se pudieron cargar los despachos: {ex.Message}";
+        }
+        _loading = false;
+    }
+
+    private static Color StatusColor(DispatchStatus status) => status switch
+    {
+        DispatchStatus.Pendiente => Color.Warning,
+        DispatchStatus.Enviado => Color.Info,
+        DispatchStatus.Entregado => Color.Success,
+        _ => Color.Error
+    };
+
+    private async Task CreateAsync()
+    {
+        try
+        {
+            var customers = (await CustomerApi.GetAllAsync()).Where(c => c.IsActive).ToList();
+            var products = await ProductApi.GetAllAsync(onlyActive: true);
+            if (customers.Count == 0)
+            {
+                Snackbar.Add("Registra al menos un cliente activo antes de crear un despacho.", Severity.Warning);
+                return;
+            }
+            if (products.Count == 0)
+            {
+                Snackbar.Add("No hay productos activos disponibles para despachar.", Severity.Warning);
+                return;
+            }
+
+            var parameters = new DialogParameters
+            {
+                ["Customers"] = customers,
+                ["Products"] = products
+            };
+            var options = new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true, CloseButton = true };
+            var dialog = await DialogService.ShowAsync<DispatchDialog>("Nuevo despacho", parameters, options);
+            var result = await dialog.Result;
+            if (result is not { Canceled: false, Data: DispatchRequest request })
+            {
+                return;
+            }
+
+            var (success, dispatch, error) = await DispatchApi.CreateAsync(request);
+            if (success && dispatch != null)
+            {
+                Snackbar.Add($"Despacho {dispatch.DispatchNumber} registrado por {dispatch.TotalAmount:C}", Severity.Success);
+                await LoadAsync();
+            }
+            else
+            {
+                Snackbar.Add(error ?? "Error al registrar el despacho", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al registrar el despacho: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task AdvanceAsync(Dispatch dispatch, DispatchStatus status)
+    {
+        var (success, error) = await DispatchApi.UpdateStatusAsync(dispatch.Id, status);
+        if (!success)
+        {
+            Snackbar.Add(error ?? "No se pudo actualizar el estado", Severity.Error);
+            return;
+        }
+
+        Snackbar.Add(status == DispatchStatus.Entregado ? "Despacho entregado" : "Despacho enviado", Severity.Success);
+        await LoadAsync();
+    }
+
+    private async Task CancelAsync(Dispatch dispatch)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Message"] = $"¿Cancelar el despacho '{dispatch.DispatchNumber}'? El stock se devolverá al inventario."
+        };
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Confirmar", parameters);
+        if ((await dialog.Result) is not { Canceled: false, Data: not null })
+        {
+            return;
+        }
+
+        var (success, error) = await DispatchApi.CancelAsync(dispatch.Id);
+        if (!success)
+        {
+            Snackbar.Add(error ?? "No se pudo cancelar el despacho", Severity.Error);
+            return;
+        }
+
+        Snackbar.Add("Despacho cancelado y stock restituido", Severity.Success);
+        await LoadAsync();
+    }
+
+    private async Task ShowDetailAsync(Dispatch dispatch)
+    {
+        var parameters = new DialogParameters { ["Dispatch"] = dispatch };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+        await DialogService.ShowAsync<DispatchDetailDialog>($"Despacho {dispatch.DispatchNumber}", parameters, options);
+    }
+}

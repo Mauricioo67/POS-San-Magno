@@ -1,0 +1,28 @@
+# Build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+TestResults/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+
+# Local configuration and secrets
+appsettings.*.local.json
+secrets.json
+*.pfx
+
+# Logs and temporary files
+*.log
+UpgradeLog.htm
+Backup/
+
+# OS files
+Thumbs.db
+.DS_Store

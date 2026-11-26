@@ -1,0 +1,88 @@
+<div class="d-flex align-center gap-3 mb-4">
+    <div class="pos-dialog-icon">
+        <MudIcon Icon="@Icons.Material.Filled.LocalShipping" />
+    </div>
+    <div>
+        <MudText Typo="Typo.overline" Class="pos-kicker">Detalle del despacho</MudText>
+        <MudText Typo="Typo.h6" Class="pos-dialog-title">@Dispatch.DispatchNumber</MudText>
+        <MudText Typo="Typo.caption" Class="pos-cell-muted">@Dispatch.DispatchDate.ToString("dd/MM/yyyy HH:mm")</MudText>
+    </div>
+</div>
+
+<MudGrid Spacing="2" Class="mb-3">
+    <MudItem xs="12" sm="6">
+        <MudText Typo="Typo.caption" Class="pos-kicker">Cliente</MudText>
+        <MudText Typo="Typo.body1" Class="pos-bold">@Dispatch.Customer?.Name</MudText>
+        <MudText Typo="Typo.caption" Class="pos-cell-muted">@Dispatch.Customer?.DocumentNumber</MudText>
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudText Typo="Typo.caption" Class="pos-kicker">Estado</MudText>
+        <MudChip T="string" Size="Size.Small" Color="@StatusColor">@Dispatch.Status</MudChip>
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudText Typo="Typo.caption" Class="pos-kicker">Registrado por</MudText>
+        <MudText Typo="Typo.body1" Class="pos-bold">@Dispatch.User?.Name</MudText>
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudText Typo="Typo.caption" Class="pos-kicker">Ítems</MudText>
+        <MudText Typo="Typo.body1" Class="pos-bold">@(Dispatch.DispatchDetails?.Sum(d => d.Quantity) ?? 0)</MudText>
+    </MudItem>
+</MudGrid>
+
+<MudPaper Class="pos-card pos-table-card" Elevation="0">
+    <MudSimpleTable Dense Hover>
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th Style="text-align: right">Cant.</th>
+                <th Style="text-align: right">Precio</th>
+                <th Style="text-align: right">Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var line in Dispatch.DispatchDetails)
+            {
+                <tr>
+                    <td class="pos-cell-primary">@line.Product?.Name</td>
+                    <td Style="text-align: right">@line.Quantity</td>
+                    <td Style="text-align: right">@line.UnitPrice.ToString("C")</td>
+                    <td Style="text-align: right" class="pos-money">@line.TotalPrice.ToString("C")</td>
+                </tr>
+            }
+        </tbody>
+    </MudSimpleTable>
+</MudPaper>
+
+<div class="pos-total-box mt-3">
+    <MudText Typo="Typo.h6" Class="pos-section-title">Total</MudText>
+    <MudText Typo="Typo.h5" Class="pos-section-title">@Dispatch.TotalAmount.ToString("C")</MudText>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Dispatch.Notes))
+{
+    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true" Class="mt-3">
+        Observaciones: @Dispatch.Notes
+    </MudAlert>
+}
+
+<div class="d-flex justify-end mt-4">
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Close">Cerrar</MudButton>
+</div>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public Dispatch Dispatch { get; set; } = new();
+
+    private Color StatusColor => Dispatch.Status switch
+    {
+        DispatchStatus.Pendiente => Color.Warning,
+        DispatchStatus.Enviado => Color.Info,
+        DispatchStatus.Entregado => Color.Success,
+        _ => Color.Error
+    };
+
+    private void Close() => MudDialog.Close();
+}

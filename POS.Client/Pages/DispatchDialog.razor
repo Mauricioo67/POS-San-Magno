@@ -1,0 +1,252 @@
+@inject ISnackbar Snackbar
+
+<div class="d-flex align-center gap-3 mb-4">
+    <div class="pos-dialog-icon">
+        <MudIcon Icon="@Icons.Material.Filled.LocalShipping" />
+    </div>
+    <div>
+        <MudText Typo="Typo.overline" Class="pos-kicker">Logística</MudText>
+        <MudText Typo="Typo.h6" Class="pos-dialog-title">Nuevo despacho</MudText>
+    </div>
+</div>
+
+<MudGrid Spacing="2" Class="mb-2">
+    <MudItem xs="12" md="6">
+        <MudSelect @bind-Value="_customerId" Label="Cliente" Variant="Variant.Outlined" Class="mb-2">
+            @foreach (var customer in Customers)
+            {
+                <MudSelectItem Value="@customer.Id">@customer.Name — @customer.DocumentNumber</MudSelectItem>
+            }
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" md="6">
+        <MudTextField @bind-Value="_notes" Label="Observaciones" MaxLines="1"
+                      Variant="Variant.Outlined" Class="mb-2" />
+    </MudItem>
+</MudGrid>
+
+<MudTextField @bind-Value="_productSearch" Placeholder="Buscar producto (nombre o código)"
+              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+              Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2" />
+
+<MudText Color="Color.Info" Class="my-2">
+    Productos recibidos: @Products.Count
+    | Resultados de búsqueda: @FilteredProducts.Count()
+</MudText>
+
+
+
+<div style="max-height:320px;
+    min-height:130px;
+    overflow-y:auto;
+    padding:12px;
+    margin-top:12px;
+    margin-bottom:18px;
+    border:1px solid #4B4265;
+    border-radius:12px;">
+
+    @if (!FilteredProducts.Any())
+    {
+        <MudAlert Severity="Severity.Info">
+            No se encontraron medicamentos.
+        </MudAlert>
+    }
+    else
+    {
+        @foreach (var product in FilteredProducts)
+        {
+            <div style="display:flex;
+                align-items:center;
+                justify-content:space-between;
+                flex-wrap:wrap;
+                gap:16px;
+                padding:16px;
+                margin-bottom:10px;
+                border:1px solid #5C4B80;
+                border-radius:12px;
+                background:#211A33;">
+
+                <div style="flex:1; min-width:210px;">
+
+                    <MudText Typo="Typo.h6"
+                             Style="font-size:18px;
+                        font-weight:700;
+                        color:white;">
+                        @product.Name
+                    </MudText>
+
+                    <MudText Typo="Typo.body2"
+                             Style="color:#C6BDDC;">
+                        Código: @product.Code
+                    </MudText>
+
+                    <MudText Typo="Typo.body1"
+                             Style="color:#E8E1FA;
+                        margin-top:6px;">
+                        Precio: Bs @product.Price.ToString("N2")
+                    </MudText>
+
+                    <MudText Typo="Typo.body2"
+                             Style="color:#54E6B3;">
+                        Stock disponible: @product.CurrentStock
+                    </MudText>
+
+                </div>
+
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Size="Size.Medium"
+                           Style="min-width:120px;
+                    min-height:44px;"
+                           Disabled="@(product.CurrentStock <= 0 ||
+                                                    CartContains(product.Id))"
+                           OnClick="() => AddToCart(product)">
+                    @(CartContains(product.Id)
+                        ? "Agregado"
+                        : "Agregar")
+                </MudButton>
+
+            </div>
+        }
+    }
+
+</div>
+
+
+
+<MudDivider Class="pos-divider my-4" />
+
+<div class="pos-section-head">
+    <MudText Typo="Typo.h6" Class="pos-section-title">Productos del despacho</MudText>
+    <span class="pos-pill">@_cart.Count item(s)</span>
+</div>
+
+@if (_cart.Count == 0)
+{
+    <EmptyState Title="Sin productos agregados"
+                Text="Selecciona productos del catálogo para incluirlos en el despacho."
+                Icon="@Icons.Material.Filled.AddShoppingCart" />
+}
+else
+{
+    <div class="d-flex flex-column gap-2">
+        @foreach (var item in _cart)
+        {
+            <div class="pos-cart-item">
+                <div class="flex-grow-1" style="min-width: 0;">
+                    <MudText Typo="Typo.body2" Class="pos-bold">@item.ProductName</MudText>
+                    <MudText Typo="Typo.caption" Class="pos-cell-muted">@item.UnitPrice.ToString("C") c/u · stock: @item.MaxStock</MudText>
+                </div>
+                <MudNumericField @bind-Value="item.Quantity" @bind-Value:after="Refresh"
+                                 Min="1" Max="@item.MaxStock" Variant="Variant.Outlined"
+                                 Style="max-width: 100px;" Immediate="false" Margin="Margin.Dense" />
+                <MudText Typo="Typo.body2" Class="pos-money" Style="min-width: 80px; text-align: right;">
+                    @((item.UnitPrice * item.Quantity).ToString("C"))
+                </MudText>
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                               aria-label="Quitar producto" OnClick="() => RemoveFromCart(item.ProductId)" />
+            </div>
+        }
+    </div>
+}
+
+<div class="pos-total-box mt-4">
+    <MudText Typo="Typo.h6" Class="pos-section-title">Total</MudText>
+    <MudText Typo="Typo.h5" Class="pos-section-title">@Total.ToString("C")</MudText>
+</div>
+
+<div class="d-flex justify-end gap-2 mt-4">
+    <MudButton OnClick="Cancel" Variant="Variant.Text">Cancelar</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.LocalShipping"
+               OnClick="Submit" Disabled="@(_cart.Count == 0)">Registrar despacho</MudButton>
+</div>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public List<Customer> Customers { get; set; } = new();
+
+    [Parameter]
+    public List<Product> Products { get; set; } = new();
+
+    private class CartItem
+    {
+        public int ProductId { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public decimal UnitPrice { get; set; }
+        public int Quantity { get; set; } = 1;
+        public int MaxStock { get; set; }
+    }
+
+    private readonly List<CartItem> _cart = new();
+    private int _customerId;
+    private string _notes = string.Empty;
+    private string _productSearch = string.Empty;
+
+    private decimal Total => _cart.Sum(c => c.UnitPrice * c.Quantity);
+
+    private IEnumerable<Product> FilteredProducts =>
+        string.IsNullOrWhiteSpace(_productSearch)
+            ? Products
+            : Products.Where(p => p.Name.Contains(_productSearch, StringComparison.OrdinalIgnoreCase)
+                               || p.Code.Contains(_productSearch, StringComparison.OrdinalIgnoreCase));
+
+    protected override void OnInitialized()
+    {
+        if (Customers.Count > 0)
+        {
+            _customerId = Customers[0].Id;
+        }
+    }
+
+    private bool CartContains(int productId) => _cart.Any(c => c.ProductId == productId);
+
+    private void AddToCart(Product product)
+    {
+        _cart.Add(new CartItem
+        {
+            ProductId = product.Id,
+            ProductName = product.Name,
+            UnitPrice = product.Price,
+            MaxStock = product.CurrentStock
+        });
+        StateHasChanged();
+    }
+
+    private void RemoveFromCart(int productId)
+    {
+        _cart.RemoveAll(c => c.ProductId == productId);
+        StateHasChanged();
+    }
+
+    private void Refresh() => StateHasChanged();
+
+    private void Submit()
+    {
+        if (_customerId <= 0 || _cart.Count == 0)
+        {
+            return;
+        }
+        if (_cart.Any(c => c.Quantity <= 0 || c.Quantity > c.MaxStock))
+        {
+            Snackbar.Add("Revisa las cantidades: deben ser mayores a cero y no superar el stock.", Severity.Warning);
+            return;
+        }
+
+        var request = new DispatchRequest
+        {
+            CustomerId = _customerId,
+            Notes = _notes,
+            Items = _cart.Select(c => new DispatchItemDto
+            {
+                ProductId = c.ProductId,
+                Quantity = c.Quantity
+            }).ToList()
+        };
+        MudDialog.Close(DialogResult.Ok(request));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

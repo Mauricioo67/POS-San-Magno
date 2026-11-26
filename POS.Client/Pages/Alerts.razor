@@ -1,0 +1,291 @@
+@page "/alerts"
+@inject ProductApiService ProductApi
+@inject DispatchApiService DispatchApi
+@inject CashClosingApiService CashClosingApi
+@inject AuthStateService AuthState
+@inject NavigationManager Navigation
+
+<PageTitle>Centro de alertas - App POS</PageTitle>
+
+<PageHeader Title="Centro de alertas"
+            Eyebrow="Operación diaria"
+            Description="Revisa el inventario crítico, los despachos por atender y el estado del cierre de caja."
+            Icon="@Icons.Material.Filled.WarningAmber">
+    <Actions>
+        <MudButton Variant="Variant.Filled" Color="Color.Inherit" Class="pos-btn-light"
+                   StartIcon="@Icons.Material.Filled.Refresh" Disabled="_loading" OnClick="LoadAsync">
+            Actualizar
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Inherit" Class="pos-btn-ghost"
+                   StartIcon="@Icons.Material.Filled.Inventory2" Href="/products">Inventario</MudButton>
+    </Actions>
+</PageHeader>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate Color="Color.Primary" Class="mb-4" />
+}
+else if (!AuthState.IsAuthenticated)
+{
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+        Debe iniciar sesión para ver el centro de alertas.
+    </MudAlert>
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_error</MudAlert>
+}
+else
+{
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Agotados" Value="@OutOfStock.Count().ToString()"
+                      Hint="Sin unidades disponibles"
+                      Icon="@Icons.Material.Filled.RemoveShoppingCart"
+                      Accent="linear-gradient(135deg,#dc2626,#f97316)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Stock bajo" Value="@LowStock.Count().ToString()"
+                      Hint="En o por debajo del mínimo"
+                      Icon="@Icons.Material.Filled.Inventory2"
+                      Accent="linear-gradient(135deg,#f59e0b,#eab308)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Despachos pendientes" Value="@PendingDispatches.Count(d => d.Status == DispatchStatus.Pendiente).ToString()"
+                      Hint="Esperando salida"
+                      Icon="@Icons.Material.Filled.LocalShipping"
+                      Accent="linear-gradient(135deg,#ec4899,#f43f5e)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="En camino" Value="@PendingDispatches.Count(d => d.Status == DispatchStatus.Enviado).ToString()"
+                      Hint="Enviados sin entregar"
+                      Icon="@Icons.Material.Filled.PendingActions"
+                      Accent="linear-gradient(135deg,#06b6d4,#0ea5e9)" />
+        </MudItem>
+    </MudGrid>
+
+    <MudGrid Spacing="3">
+        <MudItem xs="12" lg="7">
+            <MudPaper Class="pos-card pos-card-pad" Elevation="0" Style="height:100%;">
+                <div class="pos-section-head">
+                    <div>
+                        <MudText Typo="Typo.overline" Class="pos-kicker">Inventario</MudText>
+                        <MudText Typo="Typo.h6" Class="pos-section-title">Productos que requieren atención</MudText>
+                    </div>
+                    <MudChip T="string" Size="Size.Small"
+                             Color="@(CriticalProducts.Any() ? Color.Error : Color.Success)">
+                        @CriticalProducts.Count() alerta(s)
+                    </MudChip>
+                </div>
+
+                @if (!CriticalProducts.Any())
+                {
+                    <EmptyState Title="Inventario sin alertas"
+                                Text="Ningún producto activo está agotado o por debajo de su stock mínimo."
+                                Icon="@Icons.Material.Filled.CheckCircle" />
+                }
+                else
+                {
+                    <div class="pos-alert-list">
+                        @foreach (var product in CriticalProducts.Take(12))
+                        {
+                            var agotado = product.CurrentStock <= 0;
+                            <div class="pos-alert-row">
+                                <span class="pos-alert-mark @(agotado ? "is-danger" : "is-warning")"></span>
+                                <div class="pos-alert-main">
+                                    <MudText Typo="Typo.body2" Class="pos-bold">@product.Name</MudText>
+                                    <MudText Typo="Typo.caption" Class="pos-cell-muted">
+                                        @product.Code · mínimo @product.StockMinimun
+                                    </MudText>
+                                </div>
+                                <MudChip T="string" Size="Size.Small" Color="@(agotado ? Color.Error : Color.Warning)">
+                                    @(agotado ? "Agotado" : $"{product.CurrentStock} disponibles")
+                                </MudChip>
+                                <MudIconButton Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small"
+                                               Color="Color.Primary" aria-label="Gestionar producto"
+                                               OnClick="@(() => Navigation.NavigateTo("/products"))" />
+                            </div>
+                        }
+                    </div>
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" FullWidth Class="mt-2"
+                               EndIcon="@Icons.Material.Filled.ArrowForward"
+                               OnClick="@(() => Navigation.NavigateTo("/products"))">
+                        Gestionar inventario
+                    </MudButton>
+                }
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" lg="5">
+            <MudPaper Class="pos-card pos-card-pad" Elevation="0" Style="height:100%;">
+                <div class="pos-section-head">
+                    <div>
+                        <MudText Typo="Typo.overline" Class="pos-kicker">Logística</MudText>
+                        <MudText Typo="Typo.h6" Class="pos-section-title">Despachos por atender</MudText>
+                    </div>
+                    <MudChip T="string" Size="Size.Small"
+                             Color="@(PendingDispatches.Any() ? Color.Warning : Color.Success)">
+                        @PendingDispatches.Count()
+                    </MudChip>
+                </div>
+
+                @if (!PendingDispatches.Any())
+                {
+                    <EmptyState Title="Sin despachos pendientes"
+                                Text="Todos los despachos registrados ya fueron entregados o cancelados."
+                                Icon="@Icons.Material.Filled.LocalShipping" />
+                }
+                else
+                {
+                    <div class="pos-alert-list">
+                        @foreach (var dispatch in PendingDispatches.Take(8))
+                        {
+                            <div class="pos-alert-row">
+                                <span class="pos-alert-mark @(dispatch.Status == DispatchStatus.Enviado ? "is-info" : "is-warning")"></span>
+                                <div class="pos-alert-main">
+                                    <MudText Typo="Typo.body2" Class="pos-bold">@dispatch.Customer?.Name</MudText>
+                                    <MudText Typo="Typo.caption" Class="pos-cell-muted">
+                                        @dispatch.DispatchNumber · @dispatch.DispatchDate.ToString("dd/MM/yy")
+                                    </MudText>
+                                </div>
+                                <div class="pos-alert-amount">
+                                    <MudText Typo="Typo.body2" Class="pos-money">@dispatch.TotalAmount.ToString("C")</MudText>
+                                    <MudChip T="string" Size="Size.Small" Color="@StatusColor(dispatch.Status)">@dispatch.Status</MudChip>
+                                </div>
+                                <MudIconButton Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small"
+                                               Color="Color.Primary" aria-label="Gestionar despacho"
+                                               OnClick="@(() => Navigation.NavigateTo("/dispatches"))" />
+                            </div>
+                        }
+                    </div>
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" FullWidth Class="mt-2"
+                               EndIcon="@Icons.Material.Filled.ArrowForward"
+                               OnClick="@(() => Navigation.NavigateTo("/dispatches"))">
+                        Gestionar despachos
+                    </MudButton>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    @if (AuthState.IsAdmin)
+    {
+        <MudPaper Class="pos-card pos-card-pad mt-3" Elevation="0">
+            <div class="pos-section-head">
+                <div>
+                    <MudText Typo="Typo.overline" Class="pos-kicker">Administración</MudText>
+                    <MudText Typo="Typo.h6" Class="pos-section-title">Estado del cierre de caja</MudText>
+                </div>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Summarize"
+                           OnClick="@(() => Navigation.NavigateTo("/opencashclosing"))">Abrir cierre</MudButton>
+            </div>
+
+            @if (_lastClosing == null)
+            {
+                <div class="pos-alert-row">
+                    <span class="pos-alert-mark is-danger"></span>
+                    <div class="pos-alert-main">
+                        <MudText Typo="Typo.body2" Class="pos-bold">Sin cierres registrados</MudText>
+                        <MudText Typo="Typo.caption" Class="pos-cell-muted">Registra el primer cierre de caja para llevar el control diario.</MudText>
+                    </div>
+                </div>
+            }
+            else if (_lastClosing.EndDate.Date < DateTime.Today)
+            {
+                <div class="pos-alert-row">
+                    <span class="pos-alert-mark is-warning"></span>
+                    <div class="pos-alert-main">
+                        <MudText Typo="Typo.body2" Class="pos-bold">No hay cierre registrado hoy</MudText>
+                        <MudText Typo="Typo.caption" Class="pos-cell-muted">
+                            Último cierre: @_lastClosing.EndDate.ToString("dd/MM/yyyy HH:mm") · @_lastClosing.FinalBalance.ToString("C")
+                        </MudText>
+                    </div>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Warning">Pendiente</MudChip>
+                </div>
+            }
+            else
+            {
+                <div class="pos-alert-row">
+                    <span class="pos-alert-mark is-success"></span>
+                    <div class="pos-alert-main">
+                        <MudText Typo="Typo.body2" Class="pos-bold">Cierre de hoy registrado</MudText>
+                        <MudText Typo="Typo.caption" Class="pos-cell-muted">
+                            @_lastClosing.EndDate.ToString("dd/MM/yyyy HH:mm") · registrado por @_lastClosing.User?.Name
+                        </MudText>
+                    </div>
+                    <MudText Typo="Typo.body1" Class="pos-money">@_lastClosing.FinalBalance.ToString("C")</MudText>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Success">Al día</MudChip>
+                </div>
+            }
+        </MudPaper>
+    }
+}
+
+@code {
+    private bool _loading = true;
+    private string? _error;
+    private List<Product> _products = new();
+    private List<Dispatch> _dispatches = new();
+    private POS.Shared.Entities.CashClosing? _lastClosing;
+
+    private IEnumerable<Product> OutOfStock =>
+        _products.Where(p => p.IsActive && p.CurrentStock <= 0);
+
+    private IEnumerable<Product> LowStock =>
+        _products.Where(p => p.IsActive && p.CurrentStock > 0 && p.CurrentStock <= p.StockMinimun);
+
+    private IEnumerable<Product> CriticalProducts =>
+        OutOfStock.Concat(LowStock).OrderBy(p => p.CurrentStock).ThenBy(p => p.Name);
+
+    private IEnumerable<Dispatch> PendingDispatches =>
+        _dispatches.Where(d => d.Status is DispatchStatus.Pendiente or DispatchStatus.Enviado)
+            .OrderByDescending(d => d.DispatchDate);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthState.InitializeAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        if (!AuthState.IsAuthenticated)
+        {
+            _loading = false;
+            return;
+        }
+
+        try
+        {
+            var productsTask = ProductApi.GetAllAsync();
+            var dispatchesTask = DispatchApi.GetAllAsync();
+            var closingTask = AuthState.IsAdmin
+                ? CashClosingApi.GetLastAsync()
+                : Task.FromResult<POS.Shared.Entities.CashClosing?>(null);
+
+            await Task.WhenAll(productsTask, dispatchesTask, closingTask);
+
+            _products = await productsTask;
+            _dispatches = await dispatchesTask;
+            _lastClosing = await closingTask;
+        }
+        catch (Exception ex)
+        {
+            _error = $"No se pudieron cargar las alertas: {ex.Message}";
+        }
+
+        _loading = false;
+    }
+
+    private static Color StatusColor(DispatchStatus status) => status switch
+    {
+        DispatchStatus.Pendiente => Color.Warning,
+        DispatchStatus.Enviado => Color.Info,
+        DispatchStatus.Entregado => Color.Success,
+        _ => Color.Default
+    };
+}

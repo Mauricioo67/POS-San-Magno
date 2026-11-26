@@ -1,0 +1,30 @@
+@if (!string.IsNullOrWhiteSpace(Title))
+{
+    <div class="pos-page-header pos-fade">
+        <div class="pos-page-header-main">
+            <div class="pos-page-icon">
+                <MudIcon Icon="@Icon" Size="Size.Large" />
+            </div>
+            <div>
+                <MudText Typo="Typo.overline" Class="pos-page-eyebrow">@Eyebrow</MudText>
+                <MudText Typo="Typo.h4" Class="pos-page-title">@Title</MudText>
+                @if (!string.IsNullOrWhiteSpace(Description))
+                {
+                    <MudText Typo="Typo.body2" Class="pos-page-description">@Description</MudText>
+                }
+            </div>
+        </div>
+        @if (Actions != null)
+        {
+            <div class="pos-page-actions">@Actions</div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string Eyebrow { get; set; } = "App POS · San Magno";
+    [Parameter] public string Description { get; set; } = string.Empty;
+    [Parameter] public string Icon { get; set; } = Icons.Material.Filled.SpaceDashboard;
+    [Parameter] public RenderFragment? Actions { get; set; }
+}

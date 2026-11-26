@@ -6,9 +6,18 @@
     <NotFound>
         <PageTitle>Página no encontrada - App POS</PageTitle>
         <LayoutView Layout="@typeof(MainLayout)">
-            <MudAlert Severity="Severity.Warning" Class="mb-4">No existe contenido en esta dirección.</MudAlert>
-            <MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary"
-                       StartIcon="@Icons.Material.Filled.Home">Volver al inicio</MudButton>
+            <PageHeader Title="Ups, esta página no existe"
+                        Eyebrow="Error 404"
+                        Description="La dirección que escribiste no corresponde a ninguna sección del sistema. Revisa el enlace o vuelve al inicio."
+                        Icon="@Icons.Material.Filled.TravelExplore" />
+            <MudPaper Class="pos-card pos-card-pad" Elevation="0">
+                <EmptyState Title="Contenido no encontrado"
+                            Text="Puedes regresar al inicio y continuar operando el punto de venta."
+                            Icon="@Icons.Material.Filled.SearchOff">
+                    <MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Home">Volver al inicio</MudButton>
+                </EmptyState>
+            </MudPaper>
         </LayoutView>
     </NotFound>
 </Router>

@@ -1,37 +1,61 @@
 ﻿@inject AuthStateService AuthState
 @implements IDisposable
 
-<MudPaper Class="py-3" Elevation="0">
-    <MudNavMenu>
-        <div class="px-4 pb-2 d-flex align-center">
-            <MudIcon Icon="@Icons.Material.Filled.Storefront" Color="Color.Primary" Size="Size.Medium" Class="mr-3" />
-            <div>
-                <MudText Typo="Typo.subtitle1" Class="pos-bold">App POS</MudText>
-                <MudText Typo="Typo.caption" Class="mud-text-secondary">San Magno</MudText>
-            </div>
+<div class="d-flex flex-column h-100">
+    <div class="pos-drawer-brand">
+        <div class="pos-drawer-logo">
+            <MudIcon Icon="@Icons.Material.Filled.Storefront" Size="Size.Medium" />
         </div>
-        <MudDivider Class="my-2" />
-        <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Inicio</MudNavLink>
-        <MudNavLink Href="/dashboard" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
-        <MudNavLink Href="/sales" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.PointOfSale">Punto de venta</MudNavLink>
-        <MudNavLink Href="/products" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Inventory2">Productos</MudNavLink>
-        <MudNavLink Href="/categories" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Category">Categorías</MudNavLink>
-        <MudNavLink Href="/stock" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Inventory">Stock</MudNavLink>
+        <div>
+            <MudText Typo="Typo.subtitle1" Class="pos-bold" Style="letter-spacing: -0.02em;">App POS</MudText>
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">Punto de venta San Magno</MudText>
+        </div>
+    </div>
+
+    <MudNavMenu Class="px-0 py-1">
+        <div class="pos-nav-label">Operación</div>
+        <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home" Class="pos-nav-link">Inicio</MudNavLink>
+        <MudNavLink Href="/dashboard" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Dashboard" Class="pos-nav-link">Dashboard</MudNavLink>
+        <MudNavLink Href="/alerts" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.WarningAmber" Class="pos-nav-link">Centro de alertas</MudNavLink>
+        <MudNavLink Href="/sales" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.PointOfSale" Class="pos-nav-link">Punto de venta</MudNavLink>
+        <MudNavLink Href="/sales/history" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.ReceiptLong" Class="pos-nav-link">Historial de ventas</MudNavLink>
+
+        <div class="pos-nav-label">Inventario y clientes</div>
+        <MudNavLink Href="/products" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Inventory2" Class="pos-nav-link">Productos</MudNavLink>
+        <MudNavLink Href="/categories" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Category" Class="pos-nav-link">Categorías</MudNavLink>
+        <MudNavLink Href="/stock" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Inventory" Class="pos-nav-link">Stock</MudNavLink>
+        <MudNavLink Href="/customers" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.People" Class="pos-nav-link">Clientes</MudNavLink>
+        <MudNavLink Href="/dispatches" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.LocalShipping" Class="pos-nav-link">Despachos</MudNavLink>
 
         @if (AuthState.IsAdmin)
         {
-            <MudDivider Class="my-2" />
-            <MudNavGroup Title="Administración" Icon="@Icons.Material.Filled.AdminPanelSettings" Expanded="true">
-                <MudNavLink Href="/opencashclosing" Icon="@Icons.Material.Filled.Summarize" Match="NavLinkMatch.Prefix">Cierre de caja</MudNavLink>
-                <MudNavLink Href="/reports" Icon="@Icons.Material.Filled.Assessment" Match="NavLinkMatch.Prefix">Reportes</MudNavLink>
-                <MudNavLink Href="/users" Icon="@Icons.Material.Filled.VerifiedUser" Match="NavLinkMatch.Prefix">Usuarios</MudNavLink>
-            </MudNavGroup>
+            <div class="pos-nav-label">Administración</div>
+            <MudNavLink Href="/opencashclosing" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Summarize" Class="pos-nav-link">Cierre de caja</MudNavLink>
+            <MudNavLink Href="/cashclosings" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.History" Class="pos-nav-link">Historial de cierres</MudNavLink>
+            <MudNavLink Href="/reports" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Assessment" Class="pos-nav-link">Reportes</MudNavLink>
+            <MudNavLink Href="/users" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.VerifiedUser" Class="pos-nav-link">Usuarios</MudNavLink>
         }
 
-        <MudDivider Class="my-2" />
-        <MudNavLink Href="/about" Icon="@Icons.Material.Filled.Info" Match="NavLinkMatch.Prefix">Acerca de</MudNavLink>
+        <div class="pos-nav-label">Sistema</div>
+        <MudNavLink Href="/profile" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AccountCircle" Class="pos-nav-link">Mi perfil</MudNavLink>
+        <MudNavLink Href="/help" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.HelpOutline" Class="pos-nav-link">Ayuda</MudNavLink>
     </MudNavMenu>
-</MudPaper>
+
+    <div class="pos-nav-footer">
+        <div class="pos-nav-footer-card">
+            <div class="d-flex align-center gap-2 mb-1">
+                <MudIcon Icon="@Icons.Material.Filled.Bolt" Color="Color.Primary" Size="Size.Small" />
+                <MudText Typo="Typo.caption" Class="pos-bold">Sesión activa</MudText>
+            </div>
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                @(AuthState.IsAuthenticated ? $"{AuthState.FullName} · {AuthState.Role}" : "Sin sesión iniciada")
+            </MudText>
+            <MudText Typo="Typo.caption" Class="mud-text-secondary mt-1" Style="opacity: .7;">
+                App POS v1.0 · .NET 9
+            </MudText>
+        </div>
+    </div>
+</div>
 
 @code {
     protected override async Task OnInitializedAsync()

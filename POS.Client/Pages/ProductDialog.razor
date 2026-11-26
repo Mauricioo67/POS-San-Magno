@@ -1,24 +1,57 @@
-﻿@inject IDialogService DialogService
+﻿<div class="d-flex align-center gap-3 mb-4">
+    <div class="pos-dialog-icon">
+        <MudIcon Icon="@Icons.Material.Filled.Inventory2" />
+    </div>
+    <div>
+        <MudText Typo="Typo.overline" Class="pos-kicker">Catálogo</MudText>
+        <MudText Typo="Typo.h6" Class="pos-dialog-title">@(IsNew ? "Nuevo producto" : "Editar producto")</MudText>
+    </div>
+</div>
 
 <MudForm Model="@Product">
-    <MudTextField @bind-Value="Product.Code" Label="Código" Disabled="@(!IsNew)" Required Immediate Class="mb-2" />
-    <MudTextField @bind-Value="Product.Name" Label="Nombre" Required Immediate Class="mb-2" />
-    <MudTextField @bind-Value="Product.Description" Label="Descripción" Lines="2" Class="mb-2" />
-    <MudNumericField @bind-Value="Product.Price" Label="Precio" Min="0" Class="mb-2" />
-    <MudNumericField @bind-Value="Product.StockMinimun" Label="Stock mínimo" Min="0" Class="mb-2" />
-    <MudSelect @bind-Value="Product.CategoryId" Label="Categoría" Class="mb-2">
-        @foreach (var category in Categories)
-        {
-            <MudSelectItem Value="@category.Id">@category.Name</MudSelectItem>
-        }
-    </MudSelect>
-    <MudTextField @bind-Value="Product.ImageUrl" Label="URL de imagen" Class="mb-2" />
-    <MudSwitch @bind-Value="Product.IsActive" Label="Activo" Class="mb-2" />
+    <MudGrid Spacing="2">
+        <MudItem xs="12" sm="4">
+            <MudTextField @bind-Value="Product.Code" Label="Código" Required Immediate
+                          Variant="Variant.Outlined" Class="mb-2" />
+        </MudItem>
+        <MudItem xs="12" sm="8">
+            <MudTextField @bind-Value="Product.Name" Label="Nombre" Required Immediate
+                          Variant="Variant.Outlined" Class="mb-2" />
+        </MudItem>
+        <MudItem xs="12">
+            <MudTextField @bind-Value="Product.Description" Label="Descripción" Lines="2"
+                          Variant="Variant.Outlined" Class="mb-2" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudNumericField @bind-Value="Product.Price" Label="Precio" Min="0" Variant="Variant.Outlined"
+                             Format="C2" Class="mb-2" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudNumericField @bind-Value="Product.StockMinimun" Label="Stock mínimo" Min="0"
+                             Variant="Variant.Outlined" Class="mb-2" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudSelect @bind-Value="Product.CategoryId" Label="Categoría" Variant="Variant.Outlined" Class="mb-2">
+                @foreach (var category in Categories)
+                {
+                    <MudSelectItem Value="@category.Id">@category.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="Product.ImageUrl" Label="URL de imagen" Variant="Variant.Outlined" Class="mb-2" />
+        </MudItem>
+        <MudItem xs="12">
+            <MudSwitch @bind-Value="Product.IsActive" Label="Producto activo" Color="Color.Primary" Class="mb-2" />
+        </MudItem>
+    </MudGrid>
 </MudForm>
 
 <div class="d-flex justify-end gap-2 mt-4">
-    <MudButton OnClick="Cancel">Cancelar</MudButton>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Guardar</MudButton>
+    <MudButton OnClick="Cancel" Variant="Variant.Text">Cancelar</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="Submit">
+        Guardar
+    </MudButton>
 </div>
 
 @code {

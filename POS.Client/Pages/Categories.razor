@@ -1,67 +1,136 @@
 ﻿@page "/categories"
 @inject CategoryApiService CategoryApi
+@inject ProductApiService ProductApi
 @inject AuthStateService AuthState
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
 <PageTitle>Categorías - App POS</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-4">Categorías</MudText>
+<PageHeader Title="Categorías"
+            Eyebrow="Organización del catálogo"
+            Description="Agrupa tus productos para encontrar más rápido y mantener el inventario ordenado."
+            Icon="@Icons.Material.Filled.Category">
+    <Actions>
+        @if (AuthState.IsAdmin)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Inherit" Class="pos-btn-light"
+                       StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateDialog">Nueva categoría</MudButton>
+        }
+    </Actions>
+</PageHeader>
 
 @if (_loading)
 {
-    <MudProgressLinear Indeterminate />
+    <MudProgressLinear Indeterminate Color="Color.Primary" />
 }
 else if (!AuthState.IsAuthenticated)
 {
-    <MudAlert Severity="Severity.Warning">Debe iniciar sesión para ver esta sección.</MudAlert>
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">Debe iniciar sesión para ver esta sección.</MudAlert>
 }
 else if (_error != null)
 {
-    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_error</MudAlert>
 }
 else
 {
-    @if (AuthState.IsAdmin)
+    @if (!AuthState.IsAdmin)
     {
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
-                   OnClick="OpenCreateDialog" Class="mb-3">Nueva categoría</MudButton>
-    }
-    else
-    {
-        <MudAlert Severity="Severity.Info" Class="mb-3">
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-4">
             Puedes consultar categorías, pero crear, editar y eliminar requiere una cuenta Administrador.
-            Tu rol actual es @AuthState.Role. Solicita a un administrador que lo cambie desde Usuarios.
+            Tu rol actual es @AuthState.Role.
         </MudAlert>
     }
-    <MudTable Items="@_categories" Hover Striped Dense>
-        <HeaderContent>
-            <MudTh>Id</MudTh>
-            <MudTh>Nombre</MudTh>
-            <MudTh>Descripción</MudTh>
-            <MudTh Style="width: 140px;">Acciones</MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd>@context.Id</MudTd>
-            <MudTd>@context.Name</MudTd>
-            <MudTd>@context.Description</MudTd>
-            <MudTd>
-                @if (AuthState.IsAdmin)
-                {
-                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary"
-                                   OnClick="() => OpenEditDialog(context)" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
-                                   OnClick="() => DeleteAsync(context)" />
-                }
-            </MudTd>
-        </RowTemplate>
-    </MudTable>
+
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="12" sm="6" md="4">
+            <StatCard Label="Categorías" Value="@_categories.Count.ToString()" Hint="Registradas en el catálogo"
+                      Icon="@Icons.Material.Filled.Category" Accent="linear-gradient(135deg,#4f46e5,#7c3aed)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <StatCard Label="Con productos" Value="@_categories.Count(c => ProductCount(c.Id) > 0).ToString()"
+                      Hint="Categorías en uso"
+                      Icon="@Icons.Material.Filled.Inventory2" Accent="linear-gradient(135deg,#06b6d4,#0ea5e9)" />
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <StatCard Label="Productos asociados" Value="@_products.Count.ToString()" Hint="En todas las categorías"
+                      Icon="@Icons.Material.Filled.Widgets" Accent="linear-gradient(135deg,#ec4899,#f59e0b)" />
+        </MudItem>
+    </MudGrid>
+
+    <div class="pos-toolbar">
+        <div class="pos-toolbar-filters">
+            <MudTextField @bind-Value="_search" Placeholder="Buscar categoría" Variant="Variant.Outlined"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true" Class="pos-search" Margin="Margin.Dense" />
+        </div>
+        <span class="pos-pill">@FilteredCategories.Count() categoría(s)</span>
+    </div>
+
+    <MudPaper Class="pos-card pos-table-card" Elevation="0">
+        @if (!FilteredCategories.Any())
+        {
+            <EmptyState Title="Sin categorías"
+                        Text="Crea tu primera categoría para organizar los productos."
+                        Icon="@Icons.Material.Filled.Category" />
+        }
+        else
+        {
+            <MudTable Items="@FilteredCategories" Hover Dense Breakpoint="Breakpoint.Sm">
+                <HeaderContent>
+                    <MudTh>Id</MudTh>
+                    <MudTh>Categoría</MudTh>
+                    <MudTh>Descripción</MudTh>
+                    <MudTh Style="text-align: right">Productos</MudTh>
+                    <MudTh Style="text-align: right">Acciones</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd><span class="pos-cell-muted">#@context.Id</span></MudTd>
+                    <MudTd>
+                        <div class="d-flex align-center gap-2">
+                            <div class="pos-shortcut-icon" style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#4f46e5,#ec4899);">
+                                <MudIcon Icon="@Icons.Material.Filled.Folder" Size="Size.Small" />
+                            </div>
+                            <span class="pos-cell-primary">@context.Name</span>
+                        </div>
+                    </MudTd>
+                    <MudTd Class="pos-cell-muted">@context.Description</MudTd>
+                    <MudTd Style="text-align: right">
+                        <MudChip T="string" Size="Size.Small" Color="@(ProductCount(context.Id) > 0 ? Color.Primary : Color.Default)">
+                            @ProductCount(context.Id)
+                        </MudChip>
+                    </MudTd>
+                    <MudTd Style="text-align: right">
+                        <div class="d-flex justify-end">
+                            @if (AuthState.IsAdmin)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary"
+                                               aria-label="Editar categoría" OnClick="() => OpenEditDialog(context)" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                               aria-label="Eliminar categoría" OnClick="() => DeleteAsync(context)" />
+                            }
+                        </div>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudPaper>
 }
 
 @code {
     private bool _loading = true;
     private string? _error;
+    private string _search = string.Empty;
     private List<Category> _categories = new();
+    private List<Product> _products = new();
+
+    private IEnumerable<Category> FilteredCategories =>
+        string.IsNullOrWhiteSpace(_search)
+            ? _categories.OrderBy(c => c.Name)
+            : _categories.Where(c => c.Name.Contains(_search, StringComparison.OrdinalIgnoreCase))
+                         .OrderBy(c => c.Name);
+
+    private int ProductCount(int categoryId) => _products.Count(p => p.CategoryId == categoryId);
 
     protected override async Task OnInitializedAsync()
     {
@@ -81,6 +150,7 @@ else
         try
         {
             _categories = await CategoryApi.GetAllAsync();
+            _products = await ProductApi.GetAllAsync();
         }
         catch (Exception ex)
         {
@@ -130,7 +200,8 @@ else
     private async Task<bool> ShowDialog(Category category, string title)
     {
         var parameters = new DialogParameters { ["Category"] = category };
-        var dialog = await DialogService.ShowAsync<CategoryDialog>(title, parameters);
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        var dialog = await DialogService.ShowAsync<CategoryDialog>(title, parameters, options);
         var result = await dialog.Result;
         return result is { Canceled: false, Data: not null };
     }

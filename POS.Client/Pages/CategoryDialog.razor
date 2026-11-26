@@ -1,13 +1,25 @@
-﻿@inject IDialogService DialogService
+﻿<div class="d-flex align-center gap-3 mb-4">
+    <div class="pos-dialog-icon">
+        <MudIcon Icon="@Icons.Material.Filled.Category" />
+    </div>
+    <div>
+        <MudText Typo="Typo.overline" Class="pos-kicker">Catálogo</MudText>
+        <MudText Typo="Typo.h6" Class="pos-dialog-title">@(Category.Id == 0 ? "Nueva categoría" : "Editar categoría")</MudText>
+    </div>
+</div>
 
 <MudForm Model="@Category">
-    <MudTextField @bind-Value="Category.Name" Label="Nombre" Required Immediate Class="mb-2" />
-    <MudTextField @bind-Value="Category.Description" Label="Descripción" Lines="2" Class="mb-2" />
+    <MudTextField @bind-Value="Category.Name" Label="Nombre" Required Immediate
+                  Variant="Variant.Outlined" Class="mb-3" />
+    <MudTextField @bind-Value="Category.Description" Label="Descripción" Lines="2"
+                  Variant="Variant.Outlined" Class="mb-2" />
 </MudForm>
 
 <div class="d-flex justify-end gap-2 mt-4">
-    <MudButton OnClick="Cancel">Cancelar</MudButton>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Guardar</MudButton>
+    <MudButton OnClick="Cancel" Variant="Variant.Text">Cancelar</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="Submit">
+        Guardar
+    </MudButton>
 </div>
 
 @code {

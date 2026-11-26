@@ -1,3 +1,6 @@
+using System.Data;
+using Microsoft.EntityFrameworkCore;
+using POS.Server.Data;
 using POS.Server.Repositories;
 using POS.Shared.DTOs;
 using POS.Shared.Entities;
@@ -9,10 +12,18 @@ namespace POS.Server.Services
     {
         private readonly ICashClosingRepository _cashClosingRepository;
         private readonly ISaleRepository _saleRepository;
-        public CashClosingService(ICashClosingRepository cashClosingRepository, ISaleRepository saleRepository)
+        private readonly AppDbContext _context;
+        private readonly ILogger<CashClosingService> _logger;
+        public CashClosingService(
+            ICashClosingRepository cashClosingRepository,
+            ISaleRepository saleRepository,
+            AppDbContext context,
+            ILogger<CashClosingService> logger)
         {
             _cashClosingRepository = cashClosingRepository;
             _saleRepository = saleRepository;
+            _context = context;
+            _logger = logger;
         }
         public Task<List<CashClosing>> GetAllAsync()
         {
@@ -28,30 +39,49 @@ namespace POS.Server.Services
             {
                 return (null, "El saldo inicial no puede ser negativo");
             }
-            var last = await _cashClosingRepository.GetLastAsync();
-            var startDate = last?.EndDate ?? new DateTime(2000, 1, 1);
-            var endDate = DateTime.Now;
-            var sales = await _saleRepository.GetAllAsync();
-            var periodSales = sales.Where(s => s.SaleDate > startDate && s.SaleDate <= endDate).ToList();
-            var totalCash = periodSales.Where(s => s.PaymentMethod == PaymentMethod.Efectivo).Sum(s => s.TotalAmount);
-            var totalCard = periodSales.Where(s => s.PaymentMethod == PaymentMethod.Tarjeta).Sum(s => s.TotalAmount);
-            var totalTransfer = periodSales.Where(s => s.PaymentMethod == PaymentMethod.Transferencia).Sum(s => s.TotalAmount);
-            var closing = new CashClosing
+
+            await using var transaction = await _context.Database
+                .BeginTransactionAsync(IsolationLevel.Serializable);
+            try
             {
-                StartDate = startDate,
-                EndDate = endDate,
-                InitialBalance = request.InitialBalance,
-                TotalCash = totalCash,
-                TotalCard = totalCard,
-                TotalTransfer = totalTransfer,
-                TotalAdjustments = request.TotalAdjustments,
-                FinalCash = request.InitialBalance + totalCash + request.TotalAdjustments,
-                FinalBalance = request.InitialBalance + totalCash + totalCard + totalTransfer + request.TotalAdjustments,
-                UserId = request.UserId,
-                Notes = request.Notes ?? string.Empty
-            };
-            var created = await _cashClosingRepository.CreateAsync(closing);
-            return (created, null);
+                var last = await _cashClosingRepository.GetLastAsync();
+                var startDate = last?.EndDate ?? new DateTime(2000, 1, 1);
+                var endDate = DateTime.Now;
+                if (endDate <= startDate)
+                {
+                    await transaction.RollbackAsync();
+                    return (null, "Ya existe un cierre de caja que cubre el período actual");
+                }
+
+                var totals = await _saleRepository.GetTotalsByPaymentMethodAsync(startDate, endDate);
+                var totalCash = totals.GetValueOrDefault(PaymentMethod.Efectivo);
+                var totalCard = totals.GetValueOrDefault(PaymentMethod.Tarjeta);
+                var totalTransfer = totals.GetValueOrDefault(PaymentMethod.Transferencia);
+
+                var closing = new CashClosing
+                {
+                    StartDate = startDate,
+                    EndDate = endDate,
+                    InitialBalance = request.InitialBalance,
+                    TotalCash = totalCash,
+                    TotalCard = totalCard,
+                    TotalTransfer = totalTransfer,
+                    TotalAdjustments = request.TotalAdjustments,
+                    FinalCash = request.InitialBalance + totalCash + request.TotalAdjustments,
+                    FinalBalance = request.InitialBalance + totalCash + totalCard + totalTransfer + request.TotalAdjustments,
+                    UserId = request.UserId,
+                    Notes = request.Notes ?? string.Empty
+                };
+                var created = await _cashClosingRepository.CreateAsync(closing);
+                await transaction.CommitAsync();
+                return (created, null);
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Error al registrar el cierre de caja para el usuario {UserId}", request.UserId);
+                return (null, "No se pudo registrar el cierre de caja. Intenta de nuevo.");
+            }
         }
     }
 }

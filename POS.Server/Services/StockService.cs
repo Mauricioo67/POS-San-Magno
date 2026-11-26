@@ -63,6 +63,11 @@ namespace POS.Server.Services
                             .Where(p => p.Id == request.ProductId)
                             .ExecuteUpdateAsync(setters => setters
                                 .SetProperty(p => p.CurrentStock, request.Quantity));
+                        if (affected == 0)
+                        {
+                            await transaction.RollbackAsync();
+                            return (false, "Producto no existe");
+                        }
                         break;
                     default:
                         await transaction.RollbackAsync();

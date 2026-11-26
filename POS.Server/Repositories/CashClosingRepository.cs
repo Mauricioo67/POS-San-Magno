@@ -13,15 +13,15 @@ namespace POS.Server.Repositories
         }
         public async Task<List<CashClosing>> GetAllAsync()
         {
-            return await _context.CashClosing.Include(c => c.User).OrderByDescending(c => c.EndDate).ToListAsync();
+            return await _context.CashClosing.AsNoTracking().Include(c => c.User).OrderByDescending(c => c.EndDate).ToListAsync();
         }
         public async Task<CashClosing?> GetByIdAsync(int id)
         {
-            return await _context.CashClosing.Include(c => c.User).FirstOrDefaultAsync(c => c.Id == id);
+            return await _context.CashClosing.AsNoTracking().Include(c => c.User).FirstOrDefaultAsync(c => c.Id == id);
         }
         public async Task<CashClosing?> GetLastAsync()
         {
-            return await _context.CashClosing.Include(c => c.User).OrderByDescending(c => c.EndDate).FirstOrDefaultAsync();
+            return await _context.CashClosing.AsNoTracking().Include(c => c.User).OrderByDescending(c => c.EndDate).FirstOrDefaultAsync();
         }
         public async Task<CashClosing> CreateAsync(CashClosing cashClosing)
         {

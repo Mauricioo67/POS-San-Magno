@@ -1,81 +1,183 @@
 ﻿@page "/opencashclosing"
 @inject CashClosingApiService CashClosingApi
+@inject SaleApiService SaleApi
 @inject AuthStateService AuthState
 @inject ISnackbar Snackbar
 
 <PageTitle>Cierre de caja - App POS</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-4">Cierre de caja</MudText>
+<PageHeader Title="Cierre de caja"
+            Eyebrow="Administración"
+            Description="Cuadra el turno por método de pago y registra el saldo final con observaciones."
+            Icon="@Icons.Material.Filled.Summarize">
+    <Actions>
+        <MudButton Variant="Variant.Outlined" Color="Color.Inherit" Class="pos-btn-ghost"
+                   StartIcon="@Icons.Material.Filled.History" Href="/cashclosings">Historial</MudButton>
+    </Actions>
+</PageHeader>
 
 @if (_loading)
 {
-    <MudProgressLinear Indeterminate />
+    <MudProgressLinear Indeterminate Color="Color.Primary" />
 }
 else if (!AuthState.IsAuthenticated)
 {
-    <MudAlert Severity="Severity.Warning">Debe iniciar sesión para ver esta sección.</MudAlert>
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">Debe iniciar sesión para ver esta sección.</MudAlert>
 }
 else if (!AuthState.IsAdmin)
 {
-    <MudAlert Severity="Severity.Warning">Solo los administradores pueden gestionar los cierres de caja.</MudAlert>
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">Solo los administradores pueden gestionar los cierres de caja.</MudAlert>
 }
 else if (_error != null)
 {
-    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_error</MudAlert>
 }
 else
 {
-    <MudPaper Class="pa-4 mb-4" Elevation="2">
-        <MudText Typo="Typo.h6" Class="mb-2">Realizar cierre</MudText>
-        @if (_lastClosing != null)
-        {
-            <MudText Typo="Typo.body2" Class="mb-2">
-                Último cierre: @_lastClosing.EndDate.ToString("dd/MM/yyyy HH:mm") — Saldo final: @_lastClosing.FinalBalance.ToString("C")
-            </MudText>
-        }
-        <MudGrid Spacing="2">
-            <MudItem xs="12" md="3">
-                <MudNumericField @bind-Value="_initialBalance" Label="Saldo inicial" Min="0" />
-            </MudItem>
-            <MudItem xs="12" md="3">
-                <MudNumericField @bind-Value="_adjustments" Label="Ajustes" />
-            </MudItem>
-            <MudItem xs="12" md="4">
-                <MudTextField @bind-Value="_notes" Label="Notas" MaxLines="1" />
-            </MudItem>
-            <MudItem xs="12" md="2">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth StartIcon="@Icons.Material.Filled.Summarize"
-                           Disabled="_saving" OnClick="CreateClosingAsync">Cerrar caja</MudButton>
-            </MudItem>
-        </MudGrid>
-    </MudPaper>
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Último saldo final"
+                      Value="@(_lastClosing?.FinalBalance.ToString("C") ?? "—")"
+                      Hint="@(_lastClosing?.EndDate.ToString("dd/MM/yyyy HH:mm") ?? "Sin cierres")"
+                      Icon="@Icons.Material.Filled.AccountBalanceWallet"
+                      Accent="linear-gradient(135deg,#4f46e5,#7c3aed)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Cierres registrados" Value="@_closings.Count.ToString()" Hint="Histórico"
+                      Icon="@Icons.Material.Filled.History" Accent="linear-gradient(135deg,#06b6d4,#0ea5e9)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Efectivo acumulado" Value="@_closings.Sum(c => c.TotalCash).ToString("C")"
+                      Hint="Total en cierres" Icon="@Icons.Material.Filled.Payments"
+                      Accent="linear-gradient(135deg,#10b981,#84cc16)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Ajustes" Value="@_closings.Sum(c => c.TotalAdjustments).ToString("C")"
+                      Hint="Acumulados" Icon="@Icons.Material.Filled.Tune"
+                      Accent="linear-gradient(135deg,#ec4899,#f59e0b)" />
+        </MudItem>
+    </MudGrid>
 
-    <MudTable Items="@_closings" Hover Striped Dense>
-        <HeaderContent>
-            <MudTh>#</MudTh>
-            <MudTh>Inicio</MudTh>
-            <MudTh>Fin</MudTh>
-            <MudTh Style="text-align: right">Saldo inicial</MudTh>
-            <MudTh Style="text-align: right">Efectivo</MudTh>
-            <MudTh Style="text-align: right">Tarjeta</MudTh>
-            <MudTh Style="text-align: right">Transferencia</MudTh>
-            <MudTh Style="text-align: right">Ajustes</MudTh>
-            <MudTh Style="text-align: right">Saldo final</MudTh>
-            <MudTh>Usuario</MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd>@context.Id</MudTd>
-            <MudTd>@context.StartDate.ToString("dd/MM/yyyy HH:mm")</MudTd>
-            <MudTd>@context.EndDate.ToString("dd/MM/yyyy HH:mm")</MudTd>
-            <MudTd Style="text-align: right">@context.InitialBalance.ToString("C")</MudTd>
-            <MudTd Style="text-align: right">@context.TotalCash.ToString("C")</MudTd>
-            <MudTd Style="text-align: right">@context.TotalCard.ToString("C")</MudTd>
-            <MudTd Style="text-align: right">@context.TotalTransfer.ToString("C")</MudTd>
-            <MudTd Style="text-align: right">@context.TotalAdjustments.ToString("C")</MudTd>
-            <MudTd Style="text-align: right"><strong>@context.FinalBalance.ToString("C")</strong></MudTd>
-            <MudTd>@context.User?.Name</MudTd>
-        </RowTemplate>
-    </MudTable>
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="12" lg="7">
+            <MudPaper Class="pos-card pos-card-pad" Elevation="0" Style="height:100%;">
+                <div class="pos-section-head">
+                    <div>
+                        <MudText Typo="Typo.overline" Class="pos-kicker">Nuevo cierre</MudText>
+                        <MudText Typo="Typo.h6" Class="pos-section-title">Realizar cierre de caja</MudText>
+                    </div>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary">Solo administrador</MudChip>
+                </div>
+
+                @if (_lastClosing != null)
+                {
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true" Class="mb-3">
+                        Último cierre: @_lastClosing.EndDate.ToString("dd/MM/yyyy HH:mm") — saldo final @_lastClosing.FinalBalance.ToString("C").
+                    </MudAlert>
+                }
+
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" md="6">
+                        <MudNumericField @bind-Value="_initialBalance" Label="Saldo inicial" Min="0"
+                                         Variant="Variant.Outlined" Format="C2" Class="mb-2" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudNumericField @bind-Value="_adjustments" Label="Ajustes" Variant="Variant.Outlined"
+                                         Format="C2" Class="mb-2" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_notes" Label="Observaciones" MaxLines="2"
+                                      Variant="Variant.Outlined" Class="mb-3" />
+                    </MudItem>
+                </MudGrid>
+
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large"
+                           StartIcon="@Icons.Material.Filled.Summarize" Disabled="_saving"
+                           OnClick="CreateClosingAsync">Cerrar caja y registrar</MudButton>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" lg="5">
+            <MudPaper Class="pos-card pos-card-pad" Elevation="0" Style="height:100%;">
+                <MudText Typo="Typo.overline" Class="pos-kicker">Vista previa</MudText>
+                <MudText Typo="Typo.h6" Class="pos-section-title mb-3">Totales del período</MudText>
+
+                <div class="pos-permission">
+                    <MudIcon Icon="@Icons.Material.Filled.Payments" Color="Color.Success" Size="Size.Small" />
+                    <MudText Typo="Typo.body2" Class="flex-grow-1">Efectivo</MudText>
+                    <MudText Typo="Typo.body2" Class="pos-money">@PreviewCash.ToString("C")</MudText>
+                </div>
+                <div class="pos-permission">
+                    <MudIcon Icon="@Icons.Material.Filled.CreditCard" Color="Color.Info" Size="Size.Small" />
+                    <MudText Typo="Typo.body2" Class="flex-grow-1">Tarjeta</MudText>
+                    <MudText Typo="Typo.body2" Class="pos-money">@PreviewCard.ToString("C")</MudText>
+                </div>
+                <div class="pos-permission">
+                    <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Color="Color.Secondary" Size="Size.Small" />
+                    <MudText Typo="Typo.body2" Class="flex-grow-1">Transferencia</MudText>
+                    <MudText Typo="Typo.body2" Class="pos-money">@PreviewTransfer.ToString("C")</MudText>
+                </div>
+                <div class="pos-permission">
+                    <MudIcon Icon="@Icons.Material.Filled.Tune" Color="Color.Warning" Size="Size.Small" />
+                    <MudText Typo="Typo.body2" Class="flex-grow-1">Ajustes</MudText>
+                    <MudText Typo="Typo.body2" Class="pos-money">@_adjustments.ToString("C")</MudText>
+                </div>
+
+                <div class="pos-total-box mt-3">
+                    <div>
+                        <MudText Typo="Typo.caption" Class="pos-cell-muted">Saldo final estimado</MudText>
+                        <MudText Typo="Typo.h4" Class="pos-section-title" Style="line-height:1;">@PreviewFinal.ToString("C")</MudText>
+                    </div>
+                    <MudIcon Icon="@Icons.Material.Filled.Calculate" Color="Color.Primary" Size="Size.Large" />
+                </div>
+                <MudText Typo="Typo.caption" Class="pos-cell-muted mt-2">
+                    Calculado con las ventas registradas desde el último cierre.
+                </MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <MudPaper Class="pos-card pos-table-card" Elevation="0">
+        <div class="pos-card-pad pb-0">
+            <div class="pos-section-head">
+                <div>
+                    <MudText Typo="Typo.overline" Class="pos-kicker">Histórico</MudText>
+                    <MudText Typo="Typo.h6" Class="pos-section-title">Cierres recientes</MudText>
+                </div>
+                <MudButton Variant="Variant.Text" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ArrowForward"
+                           Href="/cashclosings">Ver todo</MudButton>
+            </div>
+        </div>
+        @if (_closings.Count == 0)
+        {
+            <EmptyState Title="Sin cierres registrados"
+                        Text="El primer cierre de caja aparecerá en esta lista."
+                        Icon="@Icons.Material.Filled.Summarize" />
+        }
+        else
+        {
+            <MudTable Items="@_closings.Take(6)" Hover Dense Striped>
+                <HeaderContent>
+                    <MudTh>#</MudTh>
+                    <MudTh>Inicio</MudTh>
+                    <MudTh>Fin</MudTh>
+                    <MudTh Style="text-align: right">Efectivo</MudTh>
+                    <MudTh Style="text-align: right">Tarjeta</MudTh>
+                    <MudTh Style="text-align: right">Transferencia</MudTh>
+                    <MudTh Style="text-align: right">Saldo final</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd><span class="pos-cell-primary">@context.Id</span></MudTd>
+                    <MudTd>@context.StartDate.ToString("dd/MM/yy HH:mm")</MudTd>
+                    <MudTd>@context.EndDate.ToString("dd/MM/yy HH:mm")</MudTd>
+                    <MudTd Style="text-align: right">@context.TotalCash.ToString("C")</MudTd>
+                    <MudTd Style="text-align: right">@context.TotalCard.ToString("C")</MudTd>
+                    <MudTd Style="text-align: right">@context.TotalTransfer.ToString("C")</MudTd>
+                    <MudTd Style="text-align: right" Class="pos-money">@context.FinalBalance.ToString("C")</MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudPaper>
 }
 
 @code {
@@ -87,6 +189,12 @@ else
     private string _notes = string.Empty;
     private List<POS.Shared.Entities.CashClosing> _closings = new();
     private POS.Shared.Entities.CashClosing? _lastClosing;
+    private List<Sale> _periodSales = new();
+
+    private decimal PreviewCash => _periodSales.Where(s => s.PaymentMethod == PaymentMethod.Efectivo).Sum(s => s.TotalAmount);
+    private decimal PreviewCard => _periodSales.Where(s => s.PaymentMethod == PaymentMethod.Tarjeta).Sum(s => s.TotalAmount);
+    private decimal PreviewTransfer => _periodSales.Where(s => s.PaymentMethod == PaymentMethod.Transferencia).Sum(s => s.TotalAmount);
+    private decimal PreviewFinal => _initialBalance + PreviewCash + PreviewCard + PreviewTransfer + _adjustments;
 
     protected override async Task OnInitializedAsync()
     {
@@ -107,6 +215,9 @@ else
         {
             _closings = await CashClosingApi.GetAllAsync();
             _lastClosing = await CashClosingApi.GetLastAsync();
+            var sales = await SaleApi.GetAllAsync();
+            var start = _lastClosing?.EndDate ?? DateTime.MinValue;
+            _periodSales = sales.Where(s => s.SaleDate > start).ToList();
         }
         catch (Exception ex)
         {

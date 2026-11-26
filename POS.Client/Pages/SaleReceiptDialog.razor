@@ -1,50 +1,63 @@
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
 
-<MudText Typo="Typo.h6" Class="mb-1">Venta #@Sale?.Id</MudText>
-<MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">
-    @Sale?.SaleDate.ToString("dd/MM/yyyy HH:mm")
-</MudText>
-
-<MudSimpleTable Dense Hover>
-    <thead>
-        <tr>
-            <th>Producto</th>
-            <th Style="text-align: right">Cant.</th>
-            <th Style="text-align: right">Precio</th>
-            <th Style="text-align: right">Subtotal</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var line in Lines)
-        {
-            <tr>
-                <td>@line.Name</td>
-                <td Style="text-align: right">@line.Quantity</td>
-                <td Style="text-align: right">@line.UnitPrice.ToString("C")</td>
-                <td Style="text-align: right">@line.Total.ToString("C")</td>
-            </tr>
-        }
-    </tbody>
-</MudSimpleTable>
-
-<MudDivider Class="my-3" />
-
-<div class="d-flex justify-space-between align-center">
-    <MudText Typo="Typo.subtitle1">Total</MudText>
-    <MudText Typo="Typo.h6">@Total.ToString("C")</MudText>
+<div class="d-flex align-center gap-3 mb-4">
+    <div class="pos-dialog-icon" style="background: linear-gradient(135deg,#10b981,#06b6d4);">
+        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" />
+    </div>
+    <div>
+        <MudText Typo="Typo.overline" Class="pos-kicker">Venta registrada</MudText>
+        <MudText Typo="Typo.h6" Class="pos-dialog-title">Venta #@Sale?.Id</MudText>
+        <MudText Typo="Typo.caption" Class="pos-cell-muted">@Sale?.SaleDate.ToString("dd/MM/yyyy HH:mm")</MudText>
+    </div>
 </div>
 
-<MudText Typo="Typo.body2" Class="mt-2">Método de pago: <strong>@Sale?.PaymentMethod</strong></MudText>
+<MudPaper Class="pos-card pos-table-card" Elevation="0">
+    <MudSimpleTable Dense Hover>
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th Style="text-align: right">Cant.</th>
+                <th Style="text-align: right">Precio</th>
+                <th Style="text-align: right">Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var line in Lines)
+            {
+                <tr>
+                    <td class="pos-cell-primary">@line.Name</td>
+                    <td Style="text-align: right">@line.Quantity</td>
+                    <td Style="text-align: right">@line.UnitPrice.ToString("C")</td>
+                    <td Style="text-align: right" class="pos-money">@line.Total.ToString("C")</td>
+                </tr>
+            }
+        </tbody>
+    </MudSimpleTable>
+</MudPaper>
+
+<div class="pos-total-box mt-3">
+    <div>
+        <MudText Typo="Typo.caption" Class="pos-cell-muted">Total pagado</MudText>
+        <MudText Typo="Typo.h4" Class="pos-section-title" Style="line-height:1;">@Total.ToString("C")</MudText>
+    </div>
+    <MudChip T="string" Color="Color.Primary" Size="Size.Small">@Sale?.PaymentMethod</MudChip>
+</div>
 
 @if (IsCash)
 {
-    <MudText Typo="Typo.body2">Efectivo recibido: @CashReceived.ToString("C")</MudText>
-    <MudText Typo="Typo.body2">Vuelto: <strong>@Change.ToString("C")</strong></MudText>
+    <div class="d-flex justify-space-between mt-3">
+        <MudText Typo="Typo.body2" Class="pos-cell-muted">Efectivo recibido</MudText>
+        <MudText Typo="Typo.body2" Class="pos-bold">@CashReceived.ToString("C")</MudText>
+    </div>
+    <div class="d-flex justify-space-between mt-1">
+        <MudText Typo="Typo.body2" Class="pos-cell-muted">Vuelto</MudText>
+        <MudText Typo="Typo.h6" Class="pos-section-title">@Change.ToString("C")</MudText>
+    </div>
 }
 
 <div class="d-flex justify-end gap-2 mt-4">
-    <MudButton OnClick="CopySummary">Copiar resumen</MudButton>
+    <MudButton OnClick="CopySummary" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ContentCopy">Copiar resumen</MudButton>
     <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Close">Cerrar</MudButton>
 </div>
 

@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "w8xefSGSQ7k=",
+  "dgSpecHash": "cZBbWm8Qd6g=",
   "success": true,
-  "projectFilePath": "C:\\Users\\HP\\Downloads\\desarrollo2\\proyecto\\POS\\POS.Client\\POS.Client.csproj",
+  "projectFilePath": "C:\\Users\\HP\\Downloads\\POS_SanMagno_Actualizado\\POS.Client\\POS.Client.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\HP\\.nuget\\packages\\microsoft.aspnetcore.authorization\\9.0.22\\microsoft.aspnetcore.authorization.9.0.22.nupkg.sha512",
     "C:\\Users\\HP\\.nuget\\packages\\microsoft.aspnetcore.components\\9.0.22\\microsoft.aspnetcore.components.9.0.22.nupkg.sha512",
@@ -30,12 +30,15 @@
     "C:\\Users\\HP\\.nuget\\packages\\microsoft.extensions.primitives\\9.0.22\\microsoft.extensions.primitives.9.0.22.nupkg.sha512",
     "C:\\Users\\HP\\.nuget\\packages\\microsoft.jsinterop\\9.0.22\\microsoft.jsinterop.9.0.22.nupkg.sha512",
     "C:\\Users\\HP\\.nuget\\packages\\microsoft.jsinterop.webassembly\\9.0.22\\microsoft.jsinterop.webassembly.9.0.22.nupkg.sha512",
-    "C:\\Users\\HP\\.nuget\\packages\\microsoft.net.illink.tasks\\9.0.23\\microsoft.net.illink.tasks.9.0.23.nupkg.sha512",
-    "C:\\Users\\HP\\.nuget\\packages\\microsoft.net.sdk.webassembly.pack\\11.0.0\\microsoft.net.sdk.webassembly.pack.11.0.0.nupkg.sha512",
+    "C:\\Users\\HP\\.nuget\\packages\\microsoft.net.illink.tasks\\9.0.20\\microsoft.net.illink.tasks.9.0.20.nupkg.sha512",
+    "C:\\Users\\HP\\.nuget\\packages\\microsoft.net.sdk.webassembly.pack\\10.0.12\\microsoft.net.sdk.webassembly.pack.10.0.12.nupkg.sha512",
     "C:\\Users\\HP\\.nuget\\packages\\mudblazor\\9.12.0\\mudblazor.9.12.0.nupkg.sha512",
     "C:\\Users\\HP\\.nuget\\packages\\system.componentmodel.annotations\\5.0.0\\system.componentmodel.annotations.5.0.0.nupkg.sha512",
     "C:\\Users\\HP\\.nuget\\packages\\system.text.json\\9.0.0\\system.text.json.9.0.0.nupkg.sha512",
-    "C:\\Users\\HP\\.nuget\\packages\\microsoft.netcore.app.runtime.mono.browser-wasm\\9.0.23\\microsoft.netcore.app.runtime.mono.browser-wasm.9.0.23.nupkg.sha512"
+    "C:\\Users\\HP\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\9.0.20\\microsoft.windowsdesktop.app.ref.9.0.20.nupkg.sha512",
+    "C:\\Users\\HP\\.nuget\\packages\\microsoft.netcore.app.ref\\9.0.20\\microsoft.netcore.app.ref.9.0.20.nupkg.sha512",
+    "C:\\Users\\HP\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\9.0.20\\microsoft.aspnetcore.app.ref.9.0.20.nupkg.sha512",
+    "C:\\Users\\HP\\.nuget\\packages\\microsoft.netcore.app.runtime.mono.browser-wasm\\9.0.20\\microsoft.netcore.app.runtime.mono.browser-wasm.9.0.20.nupkg.sha512"
   ],
   "logs": []
 }

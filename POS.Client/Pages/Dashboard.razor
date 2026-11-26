@@ -3,91 +3,86 @@
 @inject SaleApiService SaleApi
 @inject CashClosingApiService CashClosingApi
 @inject AuthStateService AuthState
+@inject NavigationManager Navigation
 
 <PageTitle>Dashboard - App POS</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-4">Dashboard</MudText>
+<PageHeader Title="Dashboard"
+            Eyebrow="Resumen operativo"
+            Description="Indicadores del día, alertas de inventario y movimientos recientes de la tienda."
+            Icon="@Icons.Material.Filled.Dashboard">
+    <Actions>
+        <MudButton Variant="Variant.Filled" Color="Color.Inherit" Class="pos-btn-light"
+                   StartIcon="@Icons.Material.Filled.Refresh" Disabled="_loading" OnClick="LoadAsync">
+            Actualizar
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Inherit" Class="pos-btn-ghost"
+                   StartIcon="@Icons.Material.Filled.PointOfSale" OnClick="@(() => Navigation.NavigateTo("/sales"))">
+            Nueva venta
+        </MudButton>
+    </Actions>
+</PageHeader>
 
 @if (_loading)
 {
-    <MudProgressLinear Indeterminate />
+    <MudProgressLinear Indeterminate Color="Color.Primary" Class="mb-4" />
 }
 else if (!AuthState.IsAuthenticated)
 {
-    <MudAlert Severity="Severity.Warning">Debe iniciar sesión para ver el dashboard.</MudAlert>
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+        Debe iniciar sesión para ver el dashboard.
+    </MudAlert>
 }
 else if (_error != null)
 {
-    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_error</MudAlert>
 }
 else
 {
-    <MudGrid Spacing="3" Class="mb-2">
+    <MudGrid Spacing="3" Class="mb-4">
         <MudItem xs="12" sm="6" md="3">
-            <MudPaper Class="pa-4" Elevation="2">
-                <MudText Typo="Typo.caption" Class="mud-text-secondary">Ventas de hoy</MudText>
-                <MudText Typo="Typo.h5">@_todayTotal.ToString("C")</MudText>
-                <MudText Typo="Typo.body2">@_todayCount venta(s)</MudText>
-            </MudPaper>
+            <StatCard Label="Ventas de hoy" Value="@_todayTotal.ToString("C")"
+                      Hint="@($"{_todayCount} venta(s) registradas")" Badge="HOY"
+                      Icon="@Icons.Material.Filled.Today" Accent="linear-gradient(135deg,#4f46e5,#7c3aed)" />
         </MudItem>
         <MudItem xs="12" sm="6" md="3">
-            <MudPaper Class="pa-4" Elevation="2">
-                <MudText Typo="Typo.caption" Class="mud-text-secondary">Total vendido</MudText>
-                <MudText Typo="Typo.h5">@_totalSales.ToString("C")</MudText>
-                <MudText Typo="Typo.body2">@_sales.Count venta(s) registradas</MudText>
-            </MudPaper>
+            <StatCard Label="Total vendido" Value="@_totalSales.ToString("C")"
+                      Hint="@($"{_sales.Count} venta(s) históricas")"
+                      Icon="@Icons.Material.Filled.Payments" Accent="linear-gradient(135deg,#06b6d4,#0ea5e9)" />
         </MudItem>
         <MudItem xs="12" sm="6" md="3">
-            <MudPaper Class="pa-4" Elevation="2">
-                <MudText Typo="Typo.caption" Class="mud-text-secondary">Ticket promedio</MudText>
-                <MudText Typo="Typo.h5">@_averageTicket.ToString("C")</MudText>
-                <MudText Typo="Typo.body2">Por venta</MudText>
-            </MudPaper>
+            <StatCard Label="Ticket promedio" Value="@_averageTicket.ToString("C")"
+                      Hint="Promedio por venta"
+                      Icon="@Icons.Material.Filled.ReceiptLong" Accent="linear-gradient(135deg,#ec4899,#f59e0b)" />
         </MudItem>
         <MudItem xs="12" sm="6" md="3">
-            <MudPaper Class="pa-4" Elevation="2">
-                <MudText Typo="Typo.caption" Class="mud-text-secondary">Productos activos</MudText>
-                <MudText Typo="Typo.h5">@_activeProducts</MudText>
-                <MudText Typo="Typo.body2">@LowStock.Count() con stock bajo</MudText>
-            </MudPaper>
+            <StatCard Label="Productos activos" Value="@_activeProducts.ToString()"
+                      Hint="@($"{LowStock.Count()} con stock bajo")"
+                      Icon="@Icons.Material.Filled.Inventory2"
+                      Accent="@(LowStock.Any() ? "linear-gradient(135deg,#ef4444,#f59e0b)" : "linear-gradient(135deg,#10b981,#06b6d4)")" />
         </MudItem>
     </MudGrid>
 
     <MudGrid Spacing="3">
-        <MudItem xs="12" md="6">
-            <MudPaper Class="pa-4" Elevation="2">
-                <MudText Typo="Typo.h6" Class="mb-2">Stock bajo</MudText>
-                @if (!LowStock.Any())
-                {
-                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Sin alertas de stock.</MudText>
-                }
-                else
-                {
-                    <MudTable Items="@LowStock" Hover Dense>
-                        <HeaderContent>
-                            <MudTh>Producto</MudTh>
-                            <MudTh Style="text-align: right">Actual</MudTh>
-                            <MudTh Style="text-align: right">Mínimo</MudTh>
-                        </HeaderContent>
-                        <RowTemplate>
-                            <MudTd>@context.Name</MudTd>
-                            <MudTd Style="text-align: right" Class="mud-error-text pos-bold">@context.CurrentStock</MudTd>
-                            <MudTd Style="text-align: right">@context.StockMinimun</MudTd>
-                        </RowTemplate>
-                    </MudTable>
-                }
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="12" md="6">
-            <MudPaper Class="pa-4" Elevation="2">
-                <MudText Typo="Typo.h6" Class="mb-2">Últimas ventas</MudText>
+        <MudItem xs="12" lg="7">
+            <MudPaper Class="pos-card pos-card-pad" Elevation="0" Style="height:100%;">
+                <div class="pos-section-head">
+                    <div>
+                        <MudText Typo="Typo.overline" Class="pos-kicker">Actividad</MudText>
+                        <MudText Typo="Typo.h6" Class="pos-section-title">Últimas ventas</MudText>
+                    </div>
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ArrowForward"
+                               OnClick="@(() => Navigation.NavigateTo("/sales/history"))">Ver historial</MudButton>
+                </div>
                 @if (_sales.Count == 0)
                 {
-                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Todavía no hay ventas.</MudText>
+                    <EmptyState Title="Todavía no hay ventas"
+                                Text="Registra la primera venta desde el punto de venta."
+                                Icon="@Icons.Material.Filled.ReceiptLong" />
                 }
                 else
                 {
-                    <MudTable Items="@_sales.Take(8)" Hover Dense>
+                    <MudTable Items="@_sales.Take(8)" Hover Dense Class="pos-table-card">
                         <HeaderContent>
                             <MudTh>#</MudTh>
                             <MudTh>Fecha</MudTh>
@@ -95,12 +90,72 @@ else
                             <MudTh Style="text-align: right">Total</MudTh>
                         </HeaderContent>
                         <RowTemplate>
-                            <MudTd>@context.Id</MudTd>
+                            <MudTd><span class="pos-cell-primary">@context.Id</span></MudTd>
                             <MudTd>@context.SaleDate.ToString("dd/MM/yy HH:mm")</MudTd>
-                            <MudTd>@context.PaymentMethod</MudTd>
-                            <MudTd Style="text-align: right">@context.TotalAmount.ToString("C")</MudTd>
+                            <MudTd><MudChip T="string" Size="Size.Small" Color="@PaymentColor(context.PaymentMethod)">@context.PaymentMethod</MudChip></MudTd>
+                            <MudTd Style="text-align: right" Class="pos-money">@context.TotalAmount.ToString("C")</MudTd>
                         </RowTemplate>
                     </MudTable>
+                }
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" lg="5">
+            <MudPaper Class="pos-card pos-card-pad mb-3" Elevation="0">
+                <div class="pos-section-head">
+                    <div>
+                        <MudText Typo="Typo.overline" Class="pos-kicker">Cobros</MudText>
+                        <MudText Typo="Typo.h6" Class="pos-section-title">Ventas por método</MudText>
+                    </div>
+                </div>
+                @if (_sales.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="pos-section-sub">Sin datos para mostrar.</MudText>
+                }
+                else
+                {
+                    @foreach (var item in _byMethod)
+                    {
+                        <div class="mb-3">
+                            <div class="d-flex align-center justify-space-between">
+                                <MudText Typo="Typo.body2" Class="pos-bold">@item.Method</MudText>
+                                <MudText Typo="Typo.body2" Class="pos-money">@item.Total.ToString("C")</MudText>
+                            </div>
+                            <MudProgressLinear Value="@Percentage(item.Total)" Color="@PaymentColor(item.Method)"
+                                               Rounded="true" Class="mt-1" Style="height: 8px;" />
+                            <MudText Typo="Typo.caption" Class="pos-cell-muted">@item.Count venta(s)</MudText>
+                        </div>
+                    }
+                }
+            </MudPaper>
+
+            <MudPaper Class="pos-card pos-card-pad" Elevation="0">
+                <div class="pos-section-head">
+                    <div>
+                        <MudText Typo="Typo.overline" Class="pos-kicker">Alertas</MudText>
+                        <MudText Typo="Typo.h6" Class="pos-section-title">Stock bajo</MudText>
+                    </div>
+                    <MudChip T="string" Color="@(LowStock.Any() ? Color.Error : Color.Success)" Size="Size.Small">@LowStock.Count()</MudChip>
+                </div>
+                @if (!LowStock.Any())
+                {
+                    <MudText Typo="Typo.body2" Class="pos-section-sub">Sin alertas de stock. Todo en orden.</MudText>
+                }
+                else
+                {
+                    @foreach (var product in LowStock.Take(6))
+                    {
+                        <div class="d-flex align-center justify-space-between py-1">
+                            <div>
+                                <MudText Typo="Typo.body2" Class="pos-bold">@product.Name</MudText>
+                                <MudText Typo="Typo.caption" Class="pos-cell-muted">@product.Code</MudText>
+                            </div>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Error">@product.CurrentStock / @product.StockMinimun</MudChip>
+                        </div>
+                    }
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" FullWidth Class="mt-2"
+                               EndIcon="@Icons.Material.Filled.ArrowForward"
+                               OnClick="@(() => Navigation.NavigateTo("/products"))">Gestionar productos</MudButton>
                 }
             </MudPaper>
         </MudItem>
@@ -108,17 +163,35 @@ else
 
     @if (AuthState.IsAdmin)
     {
-        <MudPaper Class="pa-4 mt-4" Elevation="2">
-            <MudText Typo="Typo.h6" Class="mb-2">Último cierre de caja</MudText>
+        <MudPaper Class="pos-card pos-card-pad mt-3" Elevation="0">
+            <div class="pos-section-head">
+                <div>
+                    <MudText Typo="Typo.overline" Class="pos-kicker">Administración</MudText>
+                    <MudText Typo="Typo.h6" Class="pos-section-title">Último cierre de caja</MudText>
+                </div>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.History"
+                           OnClick="@(() => Navigation.NavigateTo("/cashclosings"))">Ver historial</MudButton>
+            </div>
             @if (_lastClosing == null)
             {
-                <MudText Typo="Typo.body2" Class="mud-text-secondary">Aún no se ha realizado ningún cierre.</MudText>
+                <MudText Typo="Typo.body2" Class="pos-section-sub">Aún no se ha realizado ningún cierre.</MudText>
             }
             else
             {
-                <MudText Typo="Typo.body1">Fecha: @_lastClosing.EndDate.ToString("dd/MM/yyyy HH:mm")</MudText>
-                <MudText Typo="Typo.body1">Saldo final: <strong>@_lastClosing.FinalBalance.ToString("C")</strong></MudText>
-                <MudText Typo="Typo.body2" Class="mud-text-secondary">Registrado por @_lastClosing.User?.Name</MudText>
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" sm="4">
+                        <MudText Typo="Typo.caption" Class="pos-cell-muted">Fecha</MudText>
+                        <MudText Typo="Typo.body1" Class="pos-bold">@_lastClosing.EndDate.ToString("dd/MM/yyyy HH:mm")</MudText>
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudText Typo="Typo.caption" Class="pos-cell-muted">Saldo final</MudText>
+                        <MudText Typo="Typo.h6" Class="pos-section-title">@_lastClosing.FinalBalance.ToString("C")</MudText>
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudText Typo="Typo.caption" Class="pos-cell-muted">Registrado por</MudText>
+                        <MudText Typo="Typo.body1" Class="pos-bold">@_lastClosing.User?.Name</MudText>
+                    </MudItem>
+                </MudGrid>
             }
         </MudPaper>
     }
@@ -136,6 +209,9 @@ else
     private decimal _totalSales;
     private decimal _averageTicket;
     private int _activeProducts;
+
+    private record MethodTotal(string Method, int Count, decimal Total);
+    private List<MethodTotal> _byMethod = new();
 
     private IEnumerable<Product> LowStock =>
         _products.Where(p => p.IsActive && p.CurrentStock <= p.StockMinimun);
@@ -169,6 +245,10 @@ else
             _totalSales = _sales.Sum(s => s.TotalAmount);
             _averageTicket = _sales.Count == 0 ? 0 : _totalSales / _sales.Count;
             _activeProducts = _products.Count(p => p.IsActive);
+            _byMethod = _sales.GroupBy(s => s.PaymentMethod)
+                .Select(g => new MethodTotal(g.Key.ToString(), g.Count(), g.Sum(s => s.TotalAmount)))
+                .OrderByDescending(g => g.Total)
+                .ToList();
         }
         catch (Exception ex)
         {
@@ -176,4 +256,21 @@ else
         }
         _loading = false;
     }
+
+    private int Percentage(decimal total) =>
+        _totalSales <= 0 ? 0 : (int)Math.Round(total / _totalSales * 100);
+
+    private static Color PaymentColor(PaymentMethod method) => method switch
+    {
+        PaymentMethod.Efectivo => Color.Success,
+        PaymentMethod.Tarjeta => Color.Info,
+        _ => Color.Secondary
+    };
+
+    private static Color PaymentColor(string method) => method switch
+    {
+        "Efectivo" => Color.Success,
+        "Tarjeta" => Color.Info,
+        _ => Color.Secondary
+    };
 }

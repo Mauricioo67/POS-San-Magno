@@ -5,92 +5,145 @@
 
 <PageTitle>Reportes - App POS</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-4">Reportes</MudText>
+<PageHeader Title="Reportes de ventas"
+            Eyebrow="Administración"
+            Description="Analiza el desempeño por período y método de pago, y exporta la información a CSV."
+            Icon="@Icons.Material.Filled.Assessment">
+    <Actions>
+        <MudButton Variant="Variant.Filled" Color="Color.Inherit" Class="pos-btn-light"
+                   StartIcon="@Icons.Material.Filled.Download" Disabled="Filtered.Count == 0"
+                   OnClick="ExportCsvAsync">Exportar CSV</MudButton>
+    </Actions>
+</PageHeader>
 
 @if (_loading)
 {
-    <MudProgressLinear Indeterminate />
+    <MudProgressLinear Indeterminate Color="Color.Primary" />
 }
 else if (!AuthState.IsAuthenticated)
 {
-    <MudAlert Severity="Severity.Warning">Debe iniciar sesión para ver esta sección.</MudAlert>
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">Debe iniciar sesión para ver esta sección.</MudAlert>
 }
 else if (!AuthState.IsAdmin)
 {
-    <MudAlert Severity="Severity.Warning">Solo los administradores pueden ver los reportes.</MudAlert>
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">Solo los administradores pueden ver los reportes.</MudAlert>
 }
 else if (_error != null)
 {
-    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_error</MudAlert>
 }
 else
 {
-    <MudPaper Class="pa-4 mb-4" Elevation="2">
+    <MudPaper Class="pos-card pos-card-pad mb-4" Elevation="0">
         <MudGrid Spacing="2">
             <MudItem xs="12" md="3">
-                <MudDatePicker @bind-Date="_from" Label="Desde" />
+                <MudDatePicker @bind-Date="_from" Label="Desde" Variant="Variant.Outlined" />
             </MudItem>
             <MudItem xs="12" md="3">
-                <MudDatePicker @bind-Date="_to" Label="Hasta" />
+                <MudDatePicker @bind-Date="_to" Label="Hasta" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudSelect @bind-Value="_methodFilter" Label="Método de pago" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("Todos")">Todos</MudSelectItem>
+                    <MudSelectItem Value="@("Efectivo")">Efectivo</MudSelectItem>
+                    <MudSelectItem Value="@("Tarjeta")">Tarjeta</MudSelectItem>
+                    <MudSelectItem Value="@("Transferencia")">Transferencia</MudSelectItem>
+                </MudSelect>
             </MudItem>
             <MudItem xs="12" md="3">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth
                            StartIcon="@Icons.Material.Filled.FilterAlt" OnClick="Apply">Aplicar filtro</MudButton>
             </MudItem>
-            <MudItem xs="12" md="3">
-                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" FullWidth
-                           StartIcon="@Icons.Material.Filled.Download" Disabled="Filtered.Count == 0"
-                           OnClick="ExportCsvAsync">Exportar CSV</MudButton>
-            </MudItem>
         </MudGrid>
     </MudPaper>
 
-    <MudGrid Spacing="3" Class="mb-2">
-        <MudItem xs="12" md="4">
-            <MudPaper Class="pa-4" Elevation="2">
-                <MudText Typo="Typo.caption" Class="mud-text-secondary">Total del período</MudText>
-                <MudText Typo="Typo.h5">@Filtered.Sum(s => s.TotalAmount).ToString("C")</MudText>
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Total del período" Value="@Filtered.Sum(s => s.TotalAmount).ToString("C")"
+                      Hint="Monto vendido" Icon="@Icons.Material.Filled.Payments"
+                      Accent="linear-gradient(135deg,#4f46e5,#7c3aed)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Ventas" Value="@Filtered.Count.ToString()" Hint="Transacciones"
+                      Icon="@Icons.Material.Filled.ReceiptLong" Accent="linear-gradient(135deg,#06b6d4,#0ea5e9)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Ticket promedio" Value="@AverageTicket.ToString("C")" Hint="Promedio por venta"
+                      Icon="@Icons.Material.Filled.TrendingUp" Accent="linear-gradient(135deg,#ec4899,#f59e0b)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Label="Artículos" Value="@Filtered.Sum(s => s.SaleDetails?.Sum(d => d.Quantity) ?? 0).ToString()"
+                      Hint="Unidades vendidas" Icon="@Icons.Material.Filled.Inventory2"
+                      Accent="linear-gradient(135deg,#10b981,#84cc16)" />
+        </MudItem>
+    </MudGrid>
+
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="12" lg="5">
+            <MudPaper Class="pos-card pos-card-pad" Elevation="0" Style="height:100%;">
+                <MudText Typo="Typo.overline" Class="pos-kicker">Distribución</MudText>
+                <MudText Typo="Typo.h6" Class="pos-section-title mb-3">Totales por método de pago</MudText>
+                @if (ByPaymentMethod.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="pos-section-sub">No hay ventas en el período seleccionado.</MudText>
+                }
+                else
+                {
+                    @foreach (var item in ByPaymentMethod)
+                    {
+                        <div class="mb-3">
+                            <div class="d-flex align-center justify-space-between">
+                                <MudText Typo="Typo.body2" Class="pos-bold">@item.Method</MudText>
+                                <MudText Typo="Typo.body2" Class="pos-money">@item.Total.ToString("C")</MudText>
+                            </div>
+                            <MudProgressLinear Value="@Percentage(item.Total)" Color="@MethodColor(item.Method)"
+                                               Rounded="true" Class="mt-1" Style="height: 8px;" />
+                            <MudText Typo="Typo.caption" Class="pos-cell-muted">@item.Count venta(s)</MudText>
+                        </div>
+                    }
+                }
             </MudPaper>
         </MudItem>
-        <MudItem xs="12" md="4">
-            <MudPaper Class="pa-4" Elevation="2">
-                <MudText Typo="Typo.caption" Class="mud-text-secondary">Ventas</MudText>
-                <MudText Typo="Typo.h5">@Filtered.Count</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="12" md="4">
-            <MudPaper Class="pa-4" Elevation="2">
-                <MudText Typo="Typo.caption" Class="mud-text-secondary">Ticket promedio</MudText>
-                <MudText Typo="Typo.h5">@AverageTicket.ToString("C")</MudText>
+
+        <MudItem xs="12" lg="7">
+            <MudPaper Class="pos-card pos-table-card" Elevation="0">
+                <MudTable Items="@ByPaymentMethod" Hover Dense>
+                    <HeaderContent>
+                        <MudTh>Método</MudTh>
+                        <MudTh Style="text-align: right">Ventas</MudTh>
+                        <MudTh Style="text-align: right">Total</MudTh>
+                        <MudTh Style="text-align: right">Participación</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd><MudChip T="string" Size="Size.Small" Color="@MethodColor(context.Method)">@context.Method</MudChip></MudTd>
+                        <MudTd Style="text-align: right">@context.Count</MudTd>
+                        <MudTd Style="text-align: right" Class="pos-money">@context.Total.ToString("C")</MudTd>
+                        <MudTd Style="text-align: right">@Percentage(context.Total)%</MudTd>
+                    </RowTemplate>
+                </MudTable>
             </MudPaper>
         </MudItem>
     </MudGrid>
 
-    <MudPaper Class="pa-4 mb-4" Elevation="2">
-        <MudText Typo="Typo.h6" Class="mb-2">Totales por método de pago</MudText>
-        <MudTable Items="@ByPaymentMethod" Hover Dense>
-            <HeaderContent>
-                <MudTh>Método</MudTh>
-                <MudTh Style="text-align: right">Ventas</MudTh>
-                <MudTh Style="text-align: right">Total</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd>@context.Method</MudTd>
-                <MudTd Style="text-align: right">@context.Count</MudTd>
-                <MudTd Style="text-align: right">@context.Total.ToString("C")</MudTd>
-            </RowTemplate>
-        </MudTable>
-    </MudPaper>
-
-    <MudPaper Class="pa-4" Elevation="2">
-        <MudText Typo="Typo.h6" Class="mb-2">Detalle de ventas</MudText>
+    <MudPaper Class="pos-card pos-table-card" Elevation="0">
+        <div class="pos-card-pad pb-0">
+            <div class="pos-section-head">
+                <div>
+                    <MudText Typo="Typo.overline" Class="pos-kicker">Detalle</MudText>
+                    <MudText Typo="Typo.h6" Class="pos-section-title">Ventas del período</MudText>
+                </div>
+                <span class="pos-pill">@Filtered.Count venta(s)</span>
+            </div>
+        </div>
         @if (Filtered.Count == 0)
         {
-            <MudText Typo="Typo.body2" Class="mud-text-secondary">No hay ventas en el período seleccionado.</MudText>
+            <EmptyState Title="Sin ventas en el período"
+                        Text="Prueba con otro rango de fechas o método de pago."
+                        Icon="@Icons.Material.Filled.EventBusy" />
         }
         else
         {
-            <MudTable Items="@Filtered" Hover Dense Striped>
+            <MudTable Items="@Filtered" Hover Dense Striped Breakpoint="Breakpoint.Sm">
                 <HeaderContent>
                     <MudTh>#</MudTh>
                     <MudTh>Fecha</MudTh>
@@ -100,12 +153,12 @@ else
                     <MudTh Style="text-align: right">Total</MudTh>
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd>@context.Id</MudTd>
+                    <MudTd><span class="pos-cell-primary">@context.Id</span></MudTd>
                     <MudTd>@context.SaleDate.ToString("dd/MM/yyyy HH:mm")</MudTd>
-                    <MudTd>@context.User?.Name</MudTd>
-                    <MudTd>@context.PaymentMethod</MudTd>
+                    <MudTd Class="pos-cell-muted">@context.User?.Name</MudTd>
+                    <MudTd><MudChip T="string" Size="Size.Small" Color="@MethodColor(context.PaymentMethod.ToString())">@context.PaymentMethod</MudChip></MudTd>
                     <MudTd Style="text-align: right">@(context.SaleDetails?.Sum(d => d.Quantity) ?? 0)</MudTd>
-                    <MudTd Style="text-align: right">@context.TotalAmount.ToString("C")</MudTd>
+                    <MudTd Style="text-align: right" Class="pos-money">@context.TotalAmount.ToString("C")</MudTd>
                 </RowTemplate>
             </MudTable>
         }
@@ -115,6 +168,7 @@ else
 @code {
     private bool _loading = true;
     private string? _error;
+    private string _methodFilter = "Todos";
     private List<Sale> _allSales = new();
     private DateTime? _from = DateTime.Today.AddDays(-30);
     private DateTime? _to = DateTime.Today;
@@ -127,7 +181,10 @@ else
         {
             var from = (_from ?? DateTime.MinValue).Date;
             var to = (_to ?? DateTime.MaxValue).Date;
-            return _allSales.Where(s => s.SaleDate.Date >= from && s.SaleDate.Date <= to).ToList();
+            return _allSales.Where(s => s.SaleDate.Date >= from && s.SaleDate.Date <= to)
+                            .Where(s => _methodFilter == "Todos" || s.PaymentMethod.ToString() == _methodFilter)
+                            .OrderByDescending(s => s.SaleDate)
+                            .ToList();
         }
     }
 
@@ -166,6 +223,20 @@ else
         }
         StateHasChanged();
     }
+
+    private int Percentage(decimal total)
+    {
+        var sum = Filtered.Sum(s => s.TotalAmount);
+        return sum <= 0 ? 0 : (int)Math.Round(total / sum * 100);
+    }
+
+    private static Color MethodColor(string method) => method switch
+    {
+        "Efectivo" => Color.Success,
+        "Tarjeta" => Color.Info,
+        "Transferencia" => Color.Secondary,
+        _ => Color.Default
+    };
 
     private async Task ExportCsvAsync()
     {

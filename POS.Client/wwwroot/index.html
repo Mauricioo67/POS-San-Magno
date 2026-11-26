@@ -6,16 +6,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Punto de venta San Magno" />
     <meta name="theme-color" content="#4f46e5" />
+    <script>
+        (function () {
+            try {
+                var dark = localStorage.getItem('pos_darkmode') === '1';
+                document.documentElement.classList.toggle('pos-dark', dark);
+                document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+            } catch (e) { }
+        })();
+    </script>
     <title>App POS</title>
     <base href="/" />
-    <link rel="stylesheet" href="css/app.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link href="POS.Client.styles.css" rel="stylesheet" />
     <link href="manifest.webmanifest" rel="manifest" />
     <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="css/app.css" />
 </head>
 
 <body>
@@ -34,7 +43,18 @@
     </div>
     <script src="_framework/blazor.webassembly.js"></script>
     <script src="js/download.js"></script>
-    <script>navigator.serviceWorker.register('service-worker.js');</script>
+    <script>
+        // En localhost se desregistran workers anteriores para evitar que el navegador
+        // conserve archivos/configuraciones de compilaciones previas durante el desarrollo.
+        if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations()
+                    .then(registrations => registrations.forEach(registration => registration.unregister()));
+            }
+        } else if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js');
+        }
+    </script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
 </body>
 

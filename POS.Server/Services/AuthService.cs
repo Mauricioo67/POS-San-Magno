@@ -31,26 +31,6 @@ namespace POS.Server.Services
             return GenerateAuthResponse(user);
         }
 
-        public async Task<AuthResponse?> RegisterAsync(RegisterRequest request)
-        {
-            var email = request.Email.Trim().ToLowerInvariant();
-            if (await _userRepository.UserExistsAsync(email))
-            {
-                return null;
-            }
-            string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
-            var newUser = new User
-            {
-                Name = request.FullName.Trim(),
-                Email = email,
-                PasswordHash = passwordHash,
-                Role = POS.Shared.Enums.Role.Cajero,
-                IsActive = true,
-            };
-            var createdUser = await _userRepository.CreateUserAsync(newUser);
-            //Generamos inmediatamente el token o la logica requerida
-            return GenerateAuthResponse(createdUser);
-        }
         private AuthResponse GenerateAuthResponse(User user)
         {
             var tokenstring = GenerateToken(user);

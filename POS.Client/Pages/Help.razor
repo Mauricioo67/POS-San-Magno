@@ -1,0 +1,113 @@
+@page "/help"
+
+<PageTitle>Ayuda - App POS</PageTitle>
+
+<PageHeader Title="Centro de ayuda"
+            Eyebrow="Soporte"
+            Description="Guías rápidas para operar el punto de venta, el inventario y la administración del sistema."
+            Icon="@Icons.Material.Filled.HelpOutline" />
+
+<MudGrid Spacing="3" Class="mb-4">
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pos-card pos-card-pad" Elevation="0" Style="height:100%;">
+            <div class="pos-shortcut-icon mb-3" style="background: linear-gradient(135deg,#4f46e5,#7c3aed);">
+                <MudIcon Icon="@Icons.Material.Filled.PointOfSale" />
+            </div>
+            <MudText Typo="Typo.h6" Class="pos-section-title">Vender</MudText>
+            <MudText Typo="Typo.body2" Class="pos-section-sub">
+                Entra a Punto de venta, agrega productos al carrito, elige el método de pago y cobra.
+            </MudText>
+            <MudButton Href="/sales" Variant="Variant.Text" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ArrowForward"
+                       Class="mt-2">Ir a vender</MudButton>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pos-card pos-card-pad" Elevation="0" Style="height:100%;">
+            <div class="pos-shortcut-icon mb-3" style="background: linear-gradient(135deg,#06b6d4,#0ea5e9);">
+                <MudIcon Icon="@Icons.Material.Filled.Inventory" />
+            </div>
+            <MudText Typo="Typo.h6" Class="pos-section-title">Inventario</MudText>
+            <MudText Typo="Typo.body2" Class="pos-section-sub">
+                Registra entradas y salidas. Los ajustes solo están disponibles para administradores.
+            </MudText>
+            <MudButton Href="/stock" Variant="Variant.Text" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ArrowForward"
+                       Class="mt-2">Gestionar stock</MudButton>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pos-card pos-card-pad" Elevation="0" Style="height:100%;">
+            <div class="pos-shortcut-icon mb-3" style="background: linear-gradient(135deg,#ec4899,#f59e0b);">
+                <MudIcon Icon="@Icons.Material.Filled.Summarize" />
+            </div>
+            <MudText Typo="Typo.h6" Class="pos-section-title">Cerrar caja</MudText>
+            <MudText Typo="Typo.body2" class="pos-section-sub">
+                Realiza el cierre del turno y consulta los totales por método de pago.
+            </MudText>
+            <MudButton Href="/opencashclosing" Variant="Variant.Text" Color="Color.Primary"
+                       EndIcon="@Icons.Material.Filled.ArrowForward" Class="mt-2">Ir al cierre</MudButton>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudPaper Class="pos-card pos-card-pad" Elevation="0">
+    <MudText Typo="Typo.overline" Class="pos-kicker">Preguntas frecuentes</MudText>
+    <MudText Typo="Typo.h6" Class="pos-section-title mb-3">Guías paso a paso</MudText>
+
+    <MudExpansionPanels MultiExpansion="true" Elevation="0">
+        <MudExpansionPanel Text="¿Cómo registro una venta?">
+            <ChildContent>
+                <MudText Typo="Typo.body2" Class="pos-section-sub">
+                    Abre <strong>Punto de venta</strong>, busca el producto y pulsa el botón de agregar.
+                    Ajusta las cantidades en el carrito, selecciona el método de pago y pulsa
+                    <strong>Registrar venta</strong>. Si el pago es en efectivo, indica el monto recibido
+                    para calcular el vuelto. Al finalizar se muestra el recibo.
+                </MudText>
+            </ChildContent>
+        </MudExpansionPanel>
+        <MudExpansionPanel Text="¿Qué diferencia hay entre salida y ajuste de stock?">
+            <ChildContent>
+                <MudText Typo="Typo.body2" Class="pos-section-sub">
+                    La <strong>salida</strong> descuenta una cantidad del stock actual y valida que exista
+                    suficiente mercancía. El <strong>ajuste</strong> fija el stock en la cantidad indicada y
+                    está reservado a administradores.
+                </MudText>
+            </ChildContent>
+        </MudExpansionPanel>
+        <MudExpansionPanel Text="¿Cómo funciona un despacho?">
+            <ChildContent>
+                <MudText Typo="Typo.body2" Class="pos-section-sub">
+                    Crea el despacho desde <strong>Despachos</strong>, selecciona el cliente y los productos.
+                    El stock se descuenta al registrar. Puedes avanzar el estado a Enviado y Entregado, o
+                    cancelarlo; al cancelar, el stock se devuelve automáticamente.
+                </MudText>
+            </ChildContent>
+        </MudExpansionPanel>
+        <MudExpansionPanel Text="¿Cuándo se puede realizar un cierre de caja?">
+            <ChildContent>
+                <MudText Typo="Typo.body2" Class="pos-section-sub">
+                    Un cierre cubre el período desde el cierre anterior hasta el momento actual. Debe ser
+                    realizado por un administrador. Los totales por efectivo, tarjeta y transferencia se
+                    calculan automáticamente con las ventas del período.
+                </MudText>
+            </ChildContent>
+        </MudExpansionPanel>
+        <MudExpansionPanel Text="¿Cómo creo un usuario?">
+            <ChildContent>
+                <MudText Typo="Typo.body2" Class="pos-section-sub">
+                    Solo un administrador puede crear cuentas desde <strong>Usuarios</strong>. El registro
+                    público está deshabilitado. Define nombre, correo, rol y una contraseña de al menos
+                    6 caracteres.
+                </MudText>
+            </ChildContent>
+        </MudExpansionPanel>
+        <MudExpansionPanel Text="¿Puedo exportar la información?">
+            <ChildContent>
+                <MudText Typo="Typo.body2" Class="pos-section-sub">
+                    Sí. En <strong>Reportes</strong>, <strong>Historial de ventas</strong> y
+                    <strong>Historial de cierres</strong> puedes exportar el período filtrado a CSV,
+                    compatible con Excel.
+                </MudText>
+            </ChildContent>
+        </MudExpansionPanel>
+    </MudExpansionPanels>
+</MudPaper>

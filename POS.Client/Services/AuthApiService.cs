@@ -49,39 +49,5 @@ namespace POS.Client.Services
                 return (false, "El servidor devolvió una respuesta inválida al iniciar sesión.");
             }
         }
-
-        public async Task<(bool Success, string? Error)> RegisterAsync(RegisterRequest request)
-        {
-            try
-            {
-                var response = await _http.PostAsJsonAsync("api/Auth/register", request);
-                if (!response.IsSuccessStatusCode)
-                {
-                    var error = await response.Content.ReadAsStringAsync();
-                    return (false, string.IsNullOrWhiteSpace(error) ? "No se pudo registrar el usuario" : error);
-                }
-
-                var auth = await response.Content.ReadFromJsonAsync<AuthResponse>();
-                if (auth == null)
-                {
-                    return (false, "Respuesta inválida del servidor");
-                }
-
-                await _auth.SetUserAsync(auth);
-                return (true, null);
-            }
-            catch (HttpRequestException)
-            {
-                return (false, "No se pudo conectar con el servidor. Verifica que POS.Server esté iniciado y que ApiBaseUrl apunte a su dirección.");
-            }
-            catch (TaskCanceledException)
-            {
-                return (false, "La solicitud de registro agotó el tiempo de espera.");
-            }
-            catch (JsonException)
-            {
-                return (false, "El servidor devolvió una respuesta inválida al registrarse.");
-            }
-        }
     }
 }

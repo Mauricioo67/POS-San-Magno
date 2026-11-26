@@ -1,0 +1,164 @@
+@page "/profile"
+@inject AuthStateService AuthState
+@inject NavigationManager Navigation
+
+<PageTitle>Mi perfil - App POS</PageTitle>
+
+<PageHeader Title="Mi perfil"
+            Eyebrow="Cuenta"
+            Description="Revisa los datos de tu sesión, tu rol y los permisos disponibles en el sistema."
+            Icon="@Icons.Material.Filled.AccountCircle">
+    <Actions>
+        <MudButton Variant="Variant.Outlined" Color="Color.Inherit" Class="pos-btn-ghost"
+                   StartIcon="@Icons.Material.Filled.Logout" OnClick="LogoutAsync">Cerrar sesión</MudButton>
+    </Actions>
+</PageHeader>
+
+@if (!AuthState.IsAuthenticated)
+{
+    <MudPaper Class="pos-card pos-card-pad" Elevation="0">
+        <EmptyState Title="Sesión no iniciada"
+                    Text="Inicia sesión para consultar los datos de tu cuenta."
+                    Icon="@Icons.Material.Filled.Lock">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Login"
+                       OnClick="@(() => Navigation.NavigateTo("/login"))">Iniciar sesión</MudButton>
+        </EmptyState>
+    </MudPaper>
+}
+else
+{
+    <MudGrid Spacing="3">
+        <MudItem xs="12" lg="5">
+            <MudPaper Class="pos-card" Elevation="0" Style="overflow:hidden;">
+                <div class="pos-profile-cover"></div>
+                <div class="pos-card-pad" style="margin-top:-48px;">
+                    <div class="pos-profile-avatar">@Initial</div>
+                    <MudText Typo="Typo.h5" Class="pos-section-title mt-2">@AuthState.FullName</MudText>
+                    <MudText Typo="Typo.body2" Class="pos-section-sub">@AuthState.Email</MudText>
+                    <div class="d-flex gap-2 mt-3 flex-wrap">
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Icon="@Icons.Material.Filled.Badge">
+                            @AuthState.Role
+                        </MudChip>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.Verified">
+                            Sesión activa
+                        </MudChip>
+                    </div>
+
+                    <MudDivider Class="pos-divider my-4" />
+
+                    <div class="pos-permission">
+                        <MudIcon Icon="@Icons.Material.Filled.Fingerprint" Color="Color.Primary" Size="Size.Small" />
+                        <MudText Typo="Typo.body2" Class="flex-grow-1">Identificador</MudText>
+                        <MudText Typo="Typo.body2" Class="pos-mono">#@AuthState.UserId</MudText>
+                    </div>
+                    <div class="pos-permission">
+                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Color="Color.Secondary" Size="Size.Small" />
+                        <MudText Typo="Typo.body2" Class="flex-grow-1">Token expira</MudText>
+                        <MudText Typo="Typo.body2" class="pos-bold">@Expiry</MudText>
+                    </div>
+                    <div class="pos-permission">
+                        <MudIcon Icon="@Icons.Material.Filled.Security" Color="Color.Success" Size="Size.Small" />
+                        <MudText Typo="Typo.body2" Class="flex-grow-1">Autenticación</MudText>
+                        <MudText Typo="Typo.body2" class="pos-bold">JWT Bearer</MudText>
+                    </div>
+                </div>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" lg="7">
+            <MudPaper Class="pos-card pos-card-pad mb-3" Elevation="0">
+                <MudText Typo="Typo.overline" Class="pos-kicker">Permisos</MudText>
+                <MudText Typo="Typo.h6" Class="pos-section-title mb-2">Lo que puedes hacer</MudText>
+
+                <div class="pos-permission">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                    <MudText Typo="Typo.body2">Registrar ventas y consultar el historial.</MudText>
+                </div>
+                <div class="pos-permission">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                    <MudText Typo="Typo.body2">Consultar productos, stock, clientes y despachos.</MudText>
+                </div>
+                <div class="pos-permission">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                    <MudText Typo="Typo.body2">Registrar movimientos de entrada y salida de stock.</MudText>
+                </div>
+                <div class="pos-permission">
+                    <MudIcon Icon="@(AuthState.IsAdmin ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Lock)"
+                             Color="@(AuthState.IsAdmin ? Color.Success : Color.Warning)" Size="Size.Small" />
+                    <MudText Typo="Typo.body2">Administrar catálogo, usuarios y cierres de caja.</MudText>
+                </div>
+                <div class="pos-permission">
+                    <MudIcon Icon="@(AuthState.IsAdmin ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Lock)"
+                             Color="@(AuthState.IsAdmin ? Color.Success : Color.Warning)" Size="Size.Small" />
+                    <MudText Typo="Typo.body2">Consultar reportes y exportar información.</MudText>
+                </div>
+            </MudPaper>
+
+            <MudPaper Class="pos-card pos-card-pad" Elevation="0">
+                <MudText Typo="Typo.overline" Class="pos-kicker">Atajos</MudText>
+                <MudText Typo="Typo.h6" Class="pos-section-title mb-3">Continúa trabajando</MudText>
+                <div class="pos-chip-row">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PointOfSale"
+                               OnClick="@(() => Navigation.NavigateTo("/sales"))">Punto de venta</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ReceiptLong"
+                               OnClick="@(() => Navigation.NavigateTo("/sales/history"))">Historial de ventas</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.HelpOutline"
+                               OnClick="@(() => Navigation.NavigateTo("/help"))">Ayuda</MudButton>
+                </div>
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true" Class="mt-4">
+                    Para cambiar tu contraseña o rol, contacta a un administrador.
+                </MudAlert>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    private string Initial =>
+        string.IsNullOrWhiteSpace(AuthState.FullName)
+            ? "?"
+            : AuthState.FullName.Trim()[0].ToString().ToUpperInvariant();
+
+    private string Expiry
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(AuthState.Token))
+            {
+                return "—";
+            }
+            try
+            {
+                var parts = AuthState.Token.Split('.');
+                if (parts.Length != 3)
+                {
+                    return "—";
+                }
+                var payload = parts[1].Replace('-', '+').Replace('_', '/');
+                payload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
+                var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(payload));
+                using var document = System.Text.Json.JsonDocument.Parse(json);
+                if (!document.RootElement.TryGetProperty("exp", out var exp))
+                {
+                    return "—";
+                }
+                return DateTimeOffset.FromUnixTimeSeconds(exp.GetInt64()).LocalDateTime.ToString("dd/MM/yyyy HH:mm");
+            }
+            catch
+            {
+                return "—";
+            }
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthState.InitializeAsync();
+    }
+
+    private async Task LogoutAsync()
+    {
+        await AuthState.LogoutAsync();
+        Navigation.NavigateTo("/login");
+    }
+}

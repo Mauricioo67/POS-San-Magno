@@ -4,54 +4,163 @@
 
 <PageTitle>Inicio - App POS</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-1">
-    @(AuthState.IsAuthenticated ? $"Hola, {AuthState.FullName}" : "Bienvenido a App POS")
-</MudText>
+<section class="pos-hero pos-fade">
+    <div class="pos-hero-content">
+        <span class="pos-hero-eyebrow">
+            <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" />
+            @Today
+        </span>
+        <div class="pos-hero-title">
+            @(AuthState.IsAuthenticated ? $"Hola, {FirstName}" : "Tu punto de venta, más rápido que nunca")
+        </div>
+        <MudText Typo="Typo.body1" Class="pos-hero-text">
+            @(AuthState.IsAuthenticated
+                ? "Todo listo para operar. Registra ventas, controla el inventario y revisa tus resultados desde un solo lugar."
+                : "Sistema de punto de venta San Magno: ventas, stock, clientes, despachos y cierre de caja en una experiencia clara y moderna.")
+        </MudText>
+
+        @if (AuthState.IsAuthenticated)
+        {
+            <div class="d-flex align-center gap-2 mt-3 flex-wrap">
+                <MudChip T="string" Color="Color.Inherit" Variant="Variant.Filled"
+                         Icon="@Icons.Material.Filled.Badge" Size="Size.Small"
+                         Style="background: rgba(255,255,255,.18); color: #fff; border: 1px solid rgba(255,255,255,.3);">
+                    Rol: @AuthState.Role
+                </MudChip>
+                <MudChip T="string" Color="Color.Inherit" Variant="Variant.Filled"
+                         Icon="@Icons.Material.Filled.Verified" Size="Size.Small"
+                         Style="background: rgba(255,255,255,.18); color: #fff; border: 1px solid rgba(255,255,255,.3);">
+                    Sesión verificada
+                </MudChip>
+            </div>
+        }
+
+        <div class="pos-hero-actions">
+            @if (AuthState.IsAuthenticated)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Inherit" Class="pos-btn-light"
+                           StartIcon="@Icons.Material.Filled.PointOfSale" Size="Size.Large"
+                           OnClick="@(() => Navigation.NavigateTo("/sales"))">
+                    Ir al punto de venta
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Inherit" Class="pos-btn-ghost"
+                           StartIcon="@Icons.Material.Filled.Dashboard" Size="Size.Large"
+                           OnClick="@(() => Navigation.NavigateTo("/dashboard"))">
+                    Ver dashboard
+                </MudButton>
+            }
+            else
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Inherit" Class="pos-btn-light"
+                           StartIcon="@Icons.Material.Filled.Login" Size="Size.Large"
+                           OnClick="@(() => Navigation.NavigateTo("/login"))">
+                    Iniciar sesión
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Inherit" Class="pos-btn-ghost"
+                           StartIcon="@Icons.Material.Filled.HelpOutline" Size="Size.Large"
+                           OnClick="@(() => Navigation.NavigateTo("/help"))">
+                    Ver ayuda
+                </MudButton>
+            }
+        </div>
+    </div>
+</section>
+
 @if (AuthState.IsAuthenticated)
 {
-    <MudChip T="string" Color="@(AuthState.IsAdmin ? Color.Primary : Color.Default)" Variant="Variant.Filled"
-             Icon="@Icons.Material.Filled.Badge" Class="mb-3">
-        Rol: @AuthState.Role
-    </MudChip>
-}
-<MudText Typo="Typo.body1" Class="mud-text-secondary mb-4">Punto de venta San Magno.</MudText>
+    <div class="pos-section-head mt-6 mb-3">
+        <div>
+            <MudText Typo="Typo.overline" Class="pos-kicker">Accesos rápidos</MudText>
+            <MudText Typo="Typo.h5" Class="pos-section-title">¿Qué quieres hacer hoy?</MudText>
+        </div>
+        <span class="pos-pill">
+            <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Small" />
+            @_shortcuts.Count módulos disponibles
+        </span>
+    </div>
 
-@if (!AuthState.IsAuthenticated)
-{
-    <MudAlert Severity="Severity.Info" Class="mb-4">Inicie sesión para operar el sistema.</MudAlert>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Login"
-               OnClick="@(() => Navigation.NavigateTo("/login"))">Iniciar sesión</MudButton>
-}
-else
-{
     <MudGrid Spacing="3">
         @foreach (var item in _shortcuts)
         {
-            <MudItem xs="12" sm="6" md="3">
-                <MudPaper Class="pa-4 d-flex flex-column" Elevation="2" Style="height: 100%;">
-                    <MudIcon Icon="@item.Icon" Color="Color.Primary" Size="Size.Large" Class="mb-2" />
-                    <MudText Typo="Typo.subtitle1" Class="pos-bold">@item.Title</MudText>
-                    <MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">@item.Description</MudText>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth
-                               OnClick="@(() => Navigation.NavigateTo(item.Href))">Abrir</MudButton>
-                </MudPaper>
+            <MudItem xs="12" sm="6" md="4" lg="3">
+                <div class="pos-shortcut" @onclick="@(() => Navigation.NavigateTo(item.Href))" role="button" tabindex="0">
+                    <div class="pos-shortcut-icon" style="@($"background:{item.Accent};")">
+                        <MudIcon Icon="@item.Icon" />
+                    </div>
+                    <MudText Typo="Typo.subtitle1" Class="pos-shortcut-title">@item.Title</MudText>
+                    <MudText Typo="Typo.body2" Class="pos-shortcut-text">@item.Description</MudText>
+                    <div class="d-flex align-center justify-space-between">
+                        <MudText Typo="Typo.caption" Class="pos-kicker">Abrir módulo</MudText>
+                        <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Color="Color.Primary" Size="Size.Small" />
+                    </div>
+                </div>
             </MudItem>
         }
     </MudGrid>
 }
+else
+{
+    <MudGrid Spacing="3" Class="mt-4">
+        <MudItem xs="12" md="4">
+            <MudPaper Class="pos-card pos-card-pad" Elevation="0" Style="height:100%;">
+                <div class="pos-shortcut-icon mb-3" style="background: linear-gradient(135deg,#4f46e5,#7c3aed);">
+                    <MudIcon Icon="@Icons.Material.Filled.PointOfSale" />
+                </div>
+                <MudText Typo="Typo.h6" Class="pos-section-title">Ventas sin fricción</MudText>
+                <MudText Typo="Typo.body2" Class="pos-section-sub">
+                    Carrito, métodos de pago, efectivo recibido, vuelto y recibo en segundos.
+                </MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudPaper Class="pos-card pos-card-pad" Elevation="0" Style="height:100%;">
+                <div class="pos-shortcut-icon mb-3" style="background: linear-gradient(135deg,#06b6d4,#0ea5e9);">
+                    <MudIcon Icon="@Icons.Material.Filled.Inventory2" />
+                </div>
+                <MudText Typo="Typo.h6" Class="pos-section-title">Inventario bajo control</MudText>
+                <MudText Typo="Typo.body2" Class="pos-section-sub">
+                    Productos, categorías, entradas, salidas y alertas de stock mínimo.
+                </MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudPaper Class="pos-card pos-card-pad" Elevation="0" Style="height:100%;">
+                <div class="pos-shortcut-icon mb-3" style="background: linear-gradient(135deg,#ec4899,#f59e0b);">
+                    <MudIcon Icon="@Icons.Material.Filled.Assessment" />
+                </div>
+                <MudText Typo="Typo.h6" Class="pos-section-title">Decisiones con datos</MudText>
+                <MudText Typo="Typo.body2" Class="pos-section-sub">
+                    Cierres de caja, reportes por período y exportación de ventas en CSV.
+                </MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
 
 @code {
-    private record Shortcut(string Title, string Description, string Href, string Icon);
+    private record Shortcut(string Title, string Description, string Href, string Icon, string Accent);
+
+    private string Today =>
+        DateTime.Now.ToString("dddd, d 'de' MMMM 'de' yyyy",
+            System.Globalization.CultureInfo.GetCultureInfo("es-ES"));
+
+    private string FirstName =>
+        string.IsNullOrWhiteSpace(AuthState.FullName)
+            ? "de nuevo"
+            : AuthState.FullName.Trim().Split(' ')[0];
 
     private readonly List<Shortcut> _shortcuts = new()
     {
-        new("Punto de venta", "Registrar ventas y cobrar.", "/sales", Icons.Material.Filled.PointOfSale),
-        new("Productos", "Catálogo, precios y stock mínimo.", "/products", Icons.Material.Filled.Inventory2),
-        new("Stock", "Entradas, salidas y ajustes.", "/stock", Icons.Material.Filled.Inventory),
-        new("Cierre de caja", "Cuadre del turno.", "/opencashclosing", Icons.Material.Filled.Summarize),
-        new("Dashboard", "Resumen de ventas y alertas.", "/dashboard", Icons.Material.Filled.Dashboard),
-        new("Reportes", "Ventas por período y método de pago.", "/reports", Icons.Material.Filled.Assessment),
-        new("Usuarios", "Cuentas y roles del sistema.", "/users", Icons.Material.Filled.VerifiedUser)
+        new("Punto de venta", "Registrar ventas y cobrar.", "/sales", Icons.Material.Filled.PointOfSale, "linear-gradient(135deg,#4f46e5,#7c3aed)"),
+        new("Productos", "Catálogo, precios y stock mínimo.", "/products", Icons.Material.Filled.Inventory2, "linear-gradient(135deg,#7c3aed,#ec4899)"),
+        new("Stock", "Entradas, salidas y ajustes.", "/stock", Icons.Material.Filled.Inventory, "linear-gradient(135deg,#06b6d4,#0ea5e9)"),
+        new("Clientes", "Registro y datos de clientes.", "/customers", Icons.Material.Filled.People, "linear-gradient(135deg,#10b981,#06b6d4)"),
+        new("Despachos", "Salidas de mercancía y seguimiento.", "/dispatches", Icons.Material.Filled.LocalShipping, "linear-gradient(135deg,#f59e0b,#ec4899)"),
+        new("Historial de ventas", "Consulta y detalle de ventas.", "/sales/history", Icons.Material.Filled.ReceiptLong, "linear-gradient(135deg,#ec4899,#7c3aed)"),
+        new("Cierre de caja", "Cuadre del turno.", "/opencashclosing", Icons.Material.Filled.Summarize, "linear-gradient(135deg,#0ea5e9,#4f46e5)"),
+        new("Dashboard", "Resumen de ventas y alertas.", "/dashboard", Icons.Material.Filled.Dashboard, "linear-gradient(135deg,#8b5cf6,#06b6d4)"),
+        new("Reportes", "Ventas por período y método de pago.", "/reports", Icons.Material.Filled.Assessment, "linear-gradient(135deg,#f59e0b,#ef4444)"),
+        new("Usuarios", "Cuentas y roles del sistema.", "/users", Icons.Material.Filled.VerifiedUser, "linear-gradient(135deg,#4f46e5,#10b981)")
     };
 
     protected override async Task OnInitializedAsync()
